@@ -1,0 +1,25 @@
+{
+	"activation-commands": ["horst", "jack", "kevin"],
+	"active-modules" : [
+		"shell",
+		"application-control"
+	],
+	"speech-synth": "de.piegames.voicecontrol.tts.MarySpeechEngine",
+	"modules" : [
+		{
+			"name" : "shell",
+			"class-name" : "de.piegames.voicecontrol.ShellModule"
+		},
+		{
+			"name" : "application-control",
+			"class-name" : "de.piegames.voicecontrol.ApplicationModule"
+		}
+	],
+	"commands-cache" : [
+		{
+			"corpus" : [],
+			"dic" : [],
+			"lm" : []
+		}
+	]
+}

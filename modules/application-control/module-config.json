@@ -1,0 +1,4 @@
+{
+	"exit-commands" : ["exit", "stop", "quit"],
+	"reload-commands" : ["reload", "refresh", "update"]
+}
