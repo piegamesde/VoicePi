@@ -1,4 +1,4 @@
-package de.piegames.picontrol;
+package de.piegames.picontrol.module;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -6,8 +6,11 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import com.google.common.graph.MutableValueGraph;
+import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.piegames.picontrol.state.ContextState;
 
 public class ApplicationModule extends Module {
 
@@ -28,15 +31,19 @@ public class ApplicationModule extends Module {
 	}
 
 	@Override
-	public Set<String> listCommands() {
-		Set<String> ret = new HashSet<>();
-		ret.addAll(exit);
-		ret.addAll(reload);
+	public MutableValueGraph<ContextState, Set<String>> listCommands(ContextState root) {
+		MutableValueGraph<ContextState, Set<String>> ret = ValueGraphBuilder.directed().build();
+		Set<String> commands = new HashSet<>();
+		commands.addAll(exit);
+		commands.addAll(reload);
+		ContextState node = new ContextState(this, "end");
+		ret.addNode(node);
+		ret.putEdgeValue(root, node, commands);
 		return ret;
 	}
 
 	@Override
-	public void commandSpoken(String command) {
+	public void commandSpoken(ContextState currentState, String command) {
 		if (exit.contains(command))
 			System.exit(0);// TODO quit normally
 		else

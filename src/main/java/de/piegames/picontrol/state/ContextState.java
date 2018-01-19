@@ -1,7 +1,7 @@
 package de.piegames.picontrol.state;
 
 import java.util.Objects;
-import de.piegames.picontrol.Module;
+import de.piegames.picontrol.module.Module;
 
 public class ContextState {
 

@@ -1,4 +1,4 @@
-package de.piegames.picontrol;
+package de.piegames.picontrol.module;
 
 import java.io.IOException;
 import java.util.Set;
@@ -14,8 +14,8 @@ public abstract class Module {
 	public Module() throws RuntimeException, IOException {
 	}
 
-	public abstract MutableValueGraph<ContextState, Set<String>> listCommands(ContextState root, ContextState end);
-	
+	public abstract MutableValueGraph<ContextState, Set<String>> listCommands(ContextState root);
+
 	public abstract void commandSpoken(ContextState currentState, String command);
 
 	public void close() {

@@ -1,25 +1,26 @@
 {
-	"activation-commands": ["horst", "jack", "kevin"],
-	"active-modules" : [
+	"activation-commands": [
+		"horst",
+		"jack",
+		"kevin"
+	],
+
+	"active-modules": [
 		"shell",
 		"application-control"
 	],
-	"speech-synth": "de.piegames.voicecontrol.tts.MarySpeechEngine",
-	"modules" : [
-		{
-			"name" : "shell",
-			"class-name" : "de.piegames.voicecontrol.ShellModule"
+
+	"speech-synth": "de.piegames.picontrol.tts.CommandSpeechEngine",
+	"modules": {
+		"shell": {
+			"class-name": "de.piegames.picontrol.module.ShellModule"
 		},
-		{
-			"name" : "application-control",
-			"class-name" : "de.piegames.voicecontrol.ApplicationModule"
+
+		"application-control": {
+			"class-name": "de.piegames.picontrol.module.ApplicationModule"
 		}
-	],
-	"commands-cache" : [
-		{
-			"corpus" : [],
-			"dic" : [],
-			"lm" : []
-		}
-	]
+	},
+
+	"corpus-history-size": 10,
+	"local-installation": true
 }

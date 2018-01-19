@@ -1,10 +1,11 @@
 package de.piegames.picontrol;
 
-import de.piegames.picontrol.state.VoiceState4;
+import de.piegames.picontrol.state.VoiceState;
 
 public class Commands {
 
-	public Commands(VoiceState4 stateMachine) {
+	public Commands(VoiceState stateMachine) {
 		
 	}
+	
 }

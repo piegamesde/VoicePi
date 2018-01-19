@@ -1,4 +1,4 @@
-package de.piegames.picontrol;
+package de.piegames.picontrol.module;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -6,8 +6,10 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import com.google.common.graph.MutableValueGraph;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.piegames.picontrol.state.ContextState;
 
 public class ShellModule extends Module {
 
@@ -42,5 +44,17 @@ public class ShellModule extends Module {
 		} catch (NullPointerException e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public MutableValueGraph<ContextState, Set<String>> listCommands(ContextState root) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void commandSpoken(ContextState currentState, String command) {
+		// TODO Auto-generated method stub
+
 	}
 }
