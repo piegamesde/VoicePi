@@ -12,7 +12,7 @@ public class CommandSpeechEngine extends SpeechEngine {
 	@Override
 	public AudioInputStream generateAudio(String text) {
 		try {
-			Runtime.getRuntime().exec("espeak \""+text+"\"");
+			Runtime.getRuntime().exec(new String[] { "espeak", "\"" + text + "\"" });
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
