@@ -1,31 +1,27 @@
 package de.piegames.picontrol.state;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
-import de.piegames.picontrol.Module;
+import de.piegames.picontrol.module.Module;
 
-public class VoiceState4 {
+public class VoiceState {
 
-	protected final ContextState							root		= new ContextState("root"), end = new ContextState("end");
+	protected final ContextState							root		= new ContextState("root");
 	protected ContextState									current		= root;
-	protected MutableValueGraph<ContextState, Set<String>>	rootStates	= ValueGraphBuilder.directed().build();
-	protected MutableValueGraph<ContextState, Set<String>>	states		= rootStates;
+	protected MutableValueGraph<ContextState, Set<String>>	states		= ValueGraphBuilder.directed().build();
 
-	public VoiceState4() {
+	public VoiceState() {
 	}
 
 	public ContextState getRoot() {
 		return root;
 	}
 
-	public ContextState getEnd() {
-		return end;
-	}
-
 	public void addModuleGraph(MutableValueGraph<ContextState, Set<String>> graph) {
-		Set<ContextState> nodes = graph.nodes();
+		Set<ContextState> nodes = new HashSet<>(graph.nodes());
 		if (!nodes.contains(root))
 			;// TODO warn
 		Set<String> rootEdges = graph.successors(root).stream().flatMap(node -> graph.edgeValue(root, node).get().stream()).collect(Collectors.toSet());
@@ -61,5 +57,9 @@ public class VoiceState4 {
 
 	public Set<String> availableCommands(ContextState state) {
 		return states.successors(state).stream().flatMap(node -> states.edgeValue(state, node).get().stream()).collect(Collectors.toSet());
+	}
+
+	public Set<String> getAllCommands() {
+		return states.edges().stream().flatMap(edge -> states.edgeValue(edge.source(), edge.target()).get().stream()).collect(Collectors.toSet());
 	}
 }
