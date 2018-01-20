@@ -4,23 +4,19 @@
 		"jack",
 		"kevin"
 	],
-
 	"active-modules": [
 		"shell",
 		"application-control"
 	],
-
-	"speech-synth": "de.piegames.picontrol.tts.CommandSpeechEngine",
+	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {
 			"class-name": "de.piegames.picontrol.module.ShellModule"
 		},
-
 		"application-control": {
 			"class-name": "de.piegames.picontrol.module.ApplicationModule"
 		}
 	},
-
 	"corpus-history-size": 10,
 	"local-installation": true
 }

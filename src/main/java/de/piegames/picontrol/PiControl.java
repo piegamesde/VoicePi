@@ -104,7 +104,7 @@ public class PiControl {
 					.newInstance(this);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.fatal("Could not instantiate speech synthesizer; switching to MutedSpeechEngine", e);
-			tts = new MutedSpeechEngine();
+			tts = new MutedSpeechEngine(this);
 		}
 
 		// config.getAsJsonArray("activation-commands")
