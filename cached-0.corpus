@@ -1,7 +1,7 @@
-exit
-reload
-stop
+RELOAD
 TEST
-refresh
-update
-quit
+STOP
+REFRESH
+QUIT
+UPDATE
+EXIT

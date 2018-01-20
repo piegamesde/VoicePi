@@ -66,7 +66,6 @@ public class PiControl {
 				if (s.endsWith("</s>"))
 					s = s.substring(0, s.length() - 4);
 				s = s.trim();
-				System.out.println(s);
 				if ((responsible = stateMachine.commandSpoken(s)) != null) {
 					command = s;
 					break;
@@ -245,6 +244,10 @@ public class PiControl {
 		modules.values().forEach(Module::close);
 		log.info("Quitting application");
 		System.exit(0);
+	}
+
+	public SpeechEngine getTTS() {
+		return tts;
 	}
 
 	public static void main(String... args) {

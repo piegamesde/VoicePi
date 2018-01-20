@@ -1,6 +1,7 @@
 {
-	"mode": "normal, mute, background, read-aloud",
+	"_mode": "normal, mute, background, read-aloud",
+	"mode": "read-aloud",
 	"commands": {
-		"TEST": "Hello world"
+		"TEST": "echo Hello world"
 	}
 }

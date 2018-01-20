@@ -1,4 +1,13 @@
 {
-	"exit-commands" : ["exit", "stop", "quit"],
-	"reload-commands" : ["reload", "refresh", "update"]
+	"exit-commands": [
+		"EXIT",
+		"STOP",
+		"QUIT"
+	],
+
+	"reload-commands": [
+		"RELOAD",
+		"REFRESH",
+		"UPDATE"
+	]
 }
