@@ -1,6 +1,7 @@
 exit
 reload
 stop
+TEST
 refresh
 update
 quit

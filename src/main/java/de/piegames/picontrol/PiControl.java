@@ -1,8 +1,6 @@
 package de.piegames.picontrol;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -21,7 +19,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -47,7 +44,7 @@ public class PiControl {
 
 	protected final Log				log		= LogFactory.getLog(getClass());
 
-	protected VoiceState			stateMachine;
+	protected VoiceState<Module>	stateMachine;
 	protected SpeechEngine			tts;
 	protected LiveSpeechRecognizer	stt;
 	protected Map<String, Module>	modules	= new HashMap<>();
@@ -63,15 +60,22 @@ public class PiControl {
 			best.stream().forEach(System.out::println);
 			Module responsible = null;
 			String command = null;
-			for (String s : best)
+			for (String s : best) {
+				if (s.startsWith("<s>"))
+					s = s.substring(3);
+				if (s.endsWith("</s>"))
+					s = s.substring(0, s.length() - 4);
+				s = s.trim();
+				System.out.println(s);
 				if ((responsible = stateMachine.commandSpoken(s)) != null) {
 					command = s;
 					break;
 				}
+			}
 			if (responsible != null)
 				responsible.commandSpoken(stateMachine.getCurrentState(), command);
 			else
-				log.info("No module found for the command '" + command + "', this shouldn't have happened");
+				log.info("What you just said (" + command + ") makes no sense, sorry");
 		}
 	}
 
@@ -96,13 +100,15 @@ public class PiControl {
 		}
 
 		// config.getAsJsonArray("activation-commands")
-		stateMachine = new VoiceState();
+		stateMachine = new VoiceState<>();
 
 		JsonObject modules = config.getAsJsonObject("modules");
 		for (JsonElement element : config.getAsJsonArray("active-modules")) {
 			try {
 				Module module = (Module) Class.forName(
-						modules.getAsJsonObject(element.getAsString()).getAsJsonPrimitive("class-name").getAsString()).newInstance();
+						modules.getAsJsonObject(element.getAsString()).getAsJsonPrimitive("class-name").getAsString())
+						.getConstructor(PiControl.class, String.class, Path.class)
+						.newInstance(this, element.getAsString(), Paths.get("modules"));
 
 				stateMachine.addModuleGraph(module.listCommands(stateMachine.getRoot()));
 				this.modules.put(element.getAsString(), module);
@@ -156,6 +162,10 @@ public class PiControl {
 							lastModifiedTime = Files.getLastModifiedTime(p).toMillis();
 							corpus = p;
 							index = i;
+						} else {
+							corpus = p;
+							index = i;
+							break;
 						}
 					} catch (NoSuchFileException e) {
 					} catch (IOException e) {

@@ -1,4 +1,4 @@
-Language model created by QuickLM on Fri Jan 19 17:26:12 EST 2018
+Language model created by QuickLM on Sat Jan 20 06:32:43 EST 2018
 Copyright (c) 1996-2010 Carnegie Mellon University and Alexander I. Rudnicky
 
 The model is in standard ARPA format, designed by Doug Paul while he was at MITRE.
@@ -7,35 +7,38 @@ The code that was used to produce this language model is available in Open Sourc
 Please visit http://www.speech.cs.cmu.edu/tools/ for more information
 
 The (fixed) discount mass is 0.5. The backoffs are computed using the ratio method.
-This model based on a corpus of 6 sentences and 8 words
+This model based on a corpus of 7 sentences and 9 words
 
 \data\
-ngram 1=8
-ngram 2=12
-ngram 3=6
+ngram 1=9
+ngram 2=14
+ngram 3=7
 
 \1-grams:
 -0.7782 </s> -0.3010
 -0.7782 <s> -0.2218
--1.5563 EXIT -0.2218
--1.5563 QUIT -0.2218
--1.5563 REFRESH -0.2218
--1.5563 RELOAD -0.2218
--1.5563 STOP -0.2218
--1.5563 UPDATE -0.2218
+-1.6232 EXIT -0.2218
+-1.6232 QUIT -0.2218
+-1.6232 REFRESH -0.2218
+-1.6232 RELOAD -0.2218
+-1.6232 STOP -0.2218
+-1.6232 TEST -0.2218
+-1.6232 UPDATE -0.2218
 
 \2-grams:
--1.0792 <s> EXIT 0.0000
--1.0792 <s> QUIT 0.0000
--1.0792 <s> REFRESH 0.0000
--1.0792 <s> RELOAD 0.0000
--1.0792 <s> STOP 0.0000
--1.0792 <s> UPDATE 0.0000
+-1.1461 <s> EXIT 0.0000
+-1.1461 <s> QUIT 0.0000
+-1.1461 <s> REFRESH 0.0000
+-1.1461 <s> RELOAD 0.0000
+-1.1461 <s> STOP 0.0000
+-1.1461 <s> TEST 0.0000
+-1.1461 <s> UPDATE 0.0000
 -0.3010 EXIT </s> -0.3010
 -0.3010 QUIT </s> -0.3010
 -0.3010 REFRESH </s> -0.3010
 -0.3010 RELOAD </s> -0.3010
 -0.3010 STOP </s> -0.3010
+-0.3010 TEST </s> -0.3010
 -0.3010 UPDATE </s> -0.3010
 
 \3-grams:
@@ -44,6 +47,7 @@ ngram 3=6
 -0.3010 <s> REFRESH </s>
 -0.3010 <s> RELOAD </s>
 -0.3010 <s> STOP </s>
+-0.3010 <s> TEST </s>
 -0.3010 <s> UPDATE </s>
 
 \end\

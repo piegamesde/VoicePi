@@ -1,8 +1,6 @@
 {
-	"active-submodules" : {},
-	"submodules" : {
-		"name" : {
-			"mode" : "normal, mute, background, read-aloud"
-		}
+	"mode": "normal, mute, background, read-aloud",
+	"commands": {
+		"TEST": "Hello world"
 	}
 }

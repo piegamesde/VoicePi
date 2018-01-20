@@ -1,14 +1,13 @@
 package de.piegames.picontrol.state;
 
 import java.util.Objects;
-import de.piegames.picontrol.module.Module;
 
-public class ContextState {
+public class ContextState<T> {
 
-	public final Module	owner;
+	public final T	owner;
 	public final String	name;
 
-	public ContextState(Module owner, String name) {
+	public ContextState(T owner, String name) {
 		this.owner = Objects.requireNonNull(owner);
 		this.name = Objects.requireNonNull(name);
 	}

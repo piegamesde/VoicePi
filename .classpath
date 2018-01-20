@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="src/test/java"/>
 	<classpathentry kind="lib" path="libraries/marytts-lang-en-5.2.jar"/>
 	<classpathentry kind="lib" path="libraries/voice-cmu-rms-hsmm-5.2.jar"/>
 	<classpathentry kind="lib" path="libraries/voice-cmu-slt-hsmm-5.2.jar"/>
@@ -15,5 +16,6 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

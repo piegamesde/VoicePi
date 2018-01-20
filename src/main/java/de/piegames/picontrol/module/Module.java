@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.logging.Log;
@@ -29,9 +28,9 @@ public abstract class Module {
 		this.name = Objects.requireNonNull(name);
 		this.basePath = base.resolve(name);
 		try {
-			config = new JsonParser().parse(Files.newBufferedReader(basePath.resolve(name).resolve("module-config.json"))).getAsJsonObject();
+			config = new JsonParser().parse(Files.newBufferedReader(basePath.resolve("module-config.json"))).getAsJsonObject();
 		} catch (NoSuchFileException e) {
-			log.warn("File " + basePath.resolve(name).resolve("module-config.json").toAbsolutePath() + " not found, please create it");
+			log.warn("File " + basePath.resolve("module-config.json").toAbsolutePath() + " not found, please create it");
 			throw new ExceptionInInitializerError(e);
 		} catch (JsonParseException e) {
 			log.warn("module-config.json is ill-formed");
@@ -42,9 +41,9 @@ public abstract class Module {
 		}
 	}
 
-	public abstract MutableValueGraph<ContextState, Set<String>> listCommands(ContextState root);
+	public abstract MutableValueGraph<ContextState<Module>, Set<String>> listCommands(ContextState<Module> root);
 
-	public abstract void commandSpoken(ContextState currentState, String command);
+	public abstract void commandSpoken(ContextState<Module> currentState, String command);
 
 	public void close() {
 	}

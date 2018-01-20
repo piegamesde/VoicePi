@@ -28,19 +28,18 @@ public class ApplicationModule extends Module {
 	}
 
 	@Override
-	public MutableValueGraph<ContextState, Set<String>> listCommands(ContextState root) {
-		MutableValueGraph<ContextState, Set<String>> ret = ValueGraphBuilder.directed().build();
+	public MutableValueGraph<ContextState<Module>, Set<String>> listCommands(ContextState<Module> root) {
+		MutableValueGraph<ContextState<Module>, Set<String>> ret = ValueGraphBuilder.directed().build();
 		Set<String> commands = new HashSet<>();
 		commands.addAll(exit);
 		commands.addAll(reload);
-		ContextState node = new ContextState(this, "end");
-		ret.addNode(node);
+		ContextState<Module> node = new ContextState<>(this, "end");
 		ret.putEdgeValue(root, node, commands);
 		return ret;
 	}
 
 	@Override
-	public void commandSpoken(ContextState currentState, String command) {
+	public void commandSpoken(ContextState<Module> currentState, String command) {
 		if (exit.contains(command))
 			control.exitApplication();
 		else if (reload.contains(command))
