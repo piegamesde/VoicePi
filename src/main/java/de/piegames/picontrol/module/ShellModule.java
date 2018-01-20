@@ -1,8 +1,6 @@
 package de.piegames.picontrol.module;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,31 +8,18 @@ import java.util.Map;
 import java.util.Set;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+import de.piegames.picontrol.Command;
 import de.piegames.picontrol.PiControl;
 import de.piegames.picontrol.state.ContextState;
 
 public class ShellModule extends Module {
 
-	public static enum Mode {
-		NORMAL, BACKGROUND, READ_ALOUD;
-	}
-
-	protected Map<String, String>	commands	= new HashMap<>();
-	protected Mode					mode;
+	protected Map<String, Command> commands = new HashMap<>();
 
 	public ShellModule(PiControl control, String name, Path base) throws RuntimeException {
 		super(control, name, base);
 		config.getAsJsonObject("commands").entrySet().stream()
-				.forEach(e -> commands.put(e.getKey(), e.getValue().getAsString()));
-		String mode = config.getAsJsonPrimitive("mode").getAsString();
-		switch (mode) {
-			case "read-aloud":
-				this.mode = Mode.READ_ALOUD;
-				break;
-			case "normal":
-			default:
-				this.mode = Mode.NORMAL;
-		}
+				.forEach(e -> commands.put(e.getKey(), new Command(e.getValue(), control.getTTS(), this.basePath.toFile())));
 	}
 
 	@Override
@@ -48,17 +33,7 @@ public class ShellModule extends Module {
 	@Override
 	public void commandSpoken(ContextState<Module> currentState, String command) {
 		try {
-			Process process = Runtime.getRuntime().exec(commands.get(command));
-			if (mode == Mode.NORMAL)
-				process.waitFor();
-			if (mode == Mode.READ_ALOUD) {
-				try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-					String line;
-					while ((line = reader.readLine()) != null) {
-						control.getTTS().speakAndWait(line);
-					}
-				}
-			}
+			commands.get(command).execute();
 		} catch (IOException e) {
 			log.warn("Could not execute command '" + command + "'", e);
 		} catch (NullPointerException e) {

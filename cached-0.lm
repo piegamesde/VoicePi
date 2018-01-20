@@ -1,4 +1,4 @@
-Language model created by QuickLM on Sat Jan 20 08:20:59 EST 2018
+Language model created by QuickLM on Sat Jan 20 15:23:10 EST 2018
 Copyright (c) 1996-2010 Carnegie Mellon University and Alexander I. Rudnicky
 
 The model is in standard ARPA format, designed by Doug Paul while he was at MITRE.
@@ -7,47 +7,56 @@ The code that was used to produce this language model is available in Open Sourc
 Please visit http://www.speech.cs.cmu.edu/tools/ for more information
 
 The (fixed) discount mass is 0.5. The backoffs are computed using the ratio method.
-This model based on a corpus of 7 sentences and 9 words
+This model based on a corpus of 7 sentences and 12 words
 
 \data\
-ngram 1=9
-ngram 2=14
-ngram 3=7
+ngram 1=12
+ngram 2=17
+ngram 3=10
 
 \1-grams:
--0.7782 </s> -0.3010
--0.7782 <s> -0.2218
--1.6232 EXIT -0.2218
--1.6232 QUIT -0.2218
--1.6232 REFRESH -0.2218
--1.6232 RELOAD -0.2218
--1.6232 STOP -0.2218
--1.6232 TEST -0.2218
--1.6232 UPDATE -0.2218
+-0.8361 </s> -0.3010
+-0.8361 <s> -0.2326
+-1.6812 CHECK -0.2919
+-1.6812 DOWN -0.2326
+-1.6812 EXIT -0.2326
+-1.6812 INTERNET -0.2326
+-1.6812 IP -0.2326
+-1.6812 RELOAD -0.2326
+-1.6812 RESTART -0.2326
+-1.6812 SHUT -0.2919
+-1.6812 TEST -0.2326
+-1.6812 YOU -0.2919
 
 \2-grams:
+-1.1461 <s> CHECK 0.0000
 -1.1461 <s> EXIT 0.0000
--1.1461 <s> QUIT 0.0000
--1.1461 <s> REFRESH 0.0000
 -1.1461 <s> RELOAD 0.0000
--1.1461 <s> STOP 0.0000
+-1.1461 <s> RESTART 0.0000
+-1.1461 <s> SHUT 0.0000
 -1.1461 <s> TEST 0.0000
--1.1461 <s> UPDATE 0.0000
+-1.1461 <s> YOU 0.0000
+-0.3010 CHECK INTERNET 0.0000
+-0.3010 DOWN </s> -0.3010
 -0.3010 EXIT </s> -0.3010
--0.3010 QUIT </s> -0.3010
--0.3010 REFRESH </s> -0.3010
+-0.3010 INTERNET </s> -0.3010
+-0.3010 IP </s> -0.3010
 -0.3010 RELOAD </s> -0.3010
--0.3010 STOP </s> -0.3010
+-0.3010 RESTART </s> -0.3010
+-0.3010 SHUT DOWN 0.0000
 -0.3010 TEST </s> -0.3010
--0.3010 UPDATE </s> -0.3010
+-0.3010 YOU IP 0.0000
 
 \3-grams:
+-0.3010 <s> CHECK INTERNET
 -0.3010 <s> EXIT </s>
--0.3010 <s> QUIT </s>
--0.3010 <s> REFRESH </s>
 -0.3010 <s> RELOAD </s>
--0.3010 <s> STOP </s>
+-0.3010 <s> RESTART </s>
+-0.3010 <s> SHUT DOWN
 -0.3010 <s> TEST </s>
--0.3010 <s> UPDATE </s>
+-0.3010 <s> YOU IP
+-0.3010 CHECK INTERNET </s>
+-0.3010 SHUT DOWN </s>
+-0.3010 YOU IP </s>
 
 \end\

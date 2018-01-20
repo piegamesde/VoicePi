@@ -1,7 +1,8 @@
 {
-	"_mode": "normal, mute, background, read-aloud",
-	"mode": "read-aloud",
 	"commands": {
-		"TEST": "echo Hello world"
+		"TEST": {
+			"command": "echo Hello world",
+			"stdout-to-tts": "true"
+		}
 	}
 }

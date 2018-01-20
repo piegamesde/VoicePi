@@ -5,12 +5,16 @@
 		"kevin"
 	],
 	"active-modules": [
+		"pi-control",
 		"shell",
 		"application-control"
 	],
 	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {
+			"class-name": "de.piegames.picontrol.module.ShellModule"
+		},
+		"pi-control": {
 			"class-name": "de.piegames.picontrol.module.ShellModule"
 		},
 		"application-control": {

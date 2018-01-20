@@ -39,24 +39,16 @@ public class FreeSpeechEngine extends SpeechEngine {
 	public class InputStreamAudioPlayer implements AudioPlayer {
 
 		private AudioFormat			currentFormat;
-		private String				baseName;
 		private byte[]				outputData;
 		private int					curIndex;
 		private int					totBytes;
-		private Type				outputType;
 		private Vector<InputStream>	outputList;
 
-		public InputStreamAudioPlayer(String baseName, Type type) {
+		public InputStreamAudioPlayer() {
 			this.currentFormat = null;
 			this.curIndex = 0;
 			this.totBytes = 0;
-			this.baseName = baseName + "." + type.getExtension();
-			this.outputType = type;
 			this.outputList = new Vector<>();
-		}
-
-		public InputStreamAudioPlayer() {
-			this(Utilities.getProperty("com.sun.speech.freetts.AudioPlayer.baseName", "freetts"), Type.WAVE);
 		}
 
 		public synchronized void setAudioFormat(AudioFormat format) {
@@ -90,11 +82,12 @@ public class FreeSpeechEngine extends SpeechEngine {
 				SequenceInputStream is = new SequenceInputStream(this.outputList.elements());
 				AudioInputStream ais = new AudioInputStream(is, this.currentFormat,
 						(long) (this.totBytes / this.currentFormat.getFrameSize()));
-				System.out.println("Wrote synthesized speech to " + this.baseName);
+				// System.out.println("Wrote synthesized speech to " + this.baseName);
 				// AudioSystem.write(ais, this.outputType, iae);
 				return ais;
 			} catch (IllegalArgumentException arg4) {
-				System.err.println("Can\'t write audio type " + this.outputType);
+				log.warn("Cannot create audio input stream", arg4);
+				// System.err.println("Can\'t write audio type " + this.outputType);
 				return null;
 			}
 		}
