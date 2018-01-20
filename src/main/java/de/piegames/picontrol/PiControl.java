@@ -1,6 +1,7 @@
 package de.piegames.picontrol;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -44,6 +45,7 @@ public class PiControl {
 
 	protected final Log				log		= LogFactory.getLog(getClass());
 
+	protected boolean				listening;
 	protected VoiceState<Module>	stateMachine;
 	protected SpeechEngine			tts;
 	protected LiveSpeechRecognizer	stt;
@@ -51,34 +53,39 @@ public class PiControl {
 
 	public PiControl() {
 		reload();
-
-		startRecognizer();
 		SpeechResult result;
-		while ((result = stt.getResult()) != null) {
-			System.out.println("You said: " + result.getHypothesis());
-			Collection<String> best = result.getNbest(Integer.MAX_VALUE);
-			best.stream().forEach(System.out::println);
-			Module responsible = null;
-			String command = null;
-			for (String s : best) {
-				if (s.startsWith("<s>"))
-					s = s.substring(3);
-				if (s.endsWith("</s>"))
-					s = s.substring(0, s.length() - 4);
-				s = s.trim();
-				if ((responsible = stateMachine.commandSpoken(s)) != null) {
-					command = s;
-					break;
+		while (listening) {
+			if ((result = stt.getResult()) != null) {
+				log.info("You said: " + result.getHypothesis());
+				Collection<String> best = result.getNbest(Integer.MAX_VALUE);
+				// TODO actually sort them by quality
+				best.stream().forEach(System.out::println);
+				Module responsible = null;
+				String command = null;
+				for (String s : best) {
+					if (s.startsWith("<s>"))
+						s = s.substring(3);
+					if (s.endsWith("</s>"))
+						s = s.substring(0, s.length() - 4);
+					s = s.trim();
+					if ((responsible = stateMachine.commandSpoken(s)) != null) {
+						command = s;
+						break;
+					}
 				}
-			}
-			if (responsible != null)
-				responsible.commandSpoken(stateMachine.getCurrentState(), command);
-			else
-				log.info("What you just said (" + command + ") makes no sense, sorry");
+				if (responsible != null)
+					responsible.commandSpoken(stateMachine.getCurrentState(), command);
+				else
+					log.info("What you just said makes no sense, sorry");
+			} else
+				Thread.yield();
 		}
+		exitApplication();
 	}
 
 	public void reload() {
+		pauseRecognizer();
+		// TODO clean up
 		log.info("Reloading all modules");
 		modules.values().forEach(Module::close);
 		modules.clear();
@@ -92,8 +99,10 @@ public class PiControl {
 			return;
 		}
 		try {
-			tts = (SpeechEngine) Class.forName(config.getAsJsonPrimitive("speech-synth").getAsString()).newInstance();
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+			tts = (SpeechEngine) Class.forName(config.getAsJsonPrimitive("speech-synth").getAsString())
+					.getConstructor(PiControl.class)
+					.newInstance(this);
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.fatal("Could not instantiate speech synthesizer; switching to MutedSpeechEngine", e);
 			tts = new MutedSpeechEngine();
 		}
@@ -227,19 +236,29 @@ public class PiControl {
 			log.fatal("Something went wrong when trying to create the speech recogniser", e);
 			exitApplication();
 		}
+
+		startRecognizer();
 	}
 
 	public void startRecognizer() {
-		log.info("Starting/Resuming speech recognition");
+		if (listening)
+			log.debug("Resuming speech recognition");
+		else
+			log.info("Starting speech recognition");
+		listening = true;
 		stt.startRecognition(true);
 	}
 
-	public void stopRecognizer() {
-		log.info("Stopping/Pausing speech recognition");
+	public void pauseRecognizer() {
+		if (stt == null)
+			return;
+		log.debug("Pausing speech recognition");
 		stt.stopRecognition();
 	}
 
 	public void exitApplication() {
+		log.info("Stopping speech recognition");
+		listening = false;
 		stt.stopRecognition();
 		modules.values().forEach(Module::close);
 		log.info("Quitting application");

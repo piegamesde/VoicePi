@@ -18,7 +18,7 @@ public class MarySpeechEngine extends SpeechEngine {
 		try {
 			return mary.generateAudio(text);
 		} catch (SynthesisException e) {
-			LOG.info("Could not generate audio for text '" + text + "'", e);
+			log.info("Could not generate audio for text '" + text + "'", e);
 			return null;
 		}
 	}
