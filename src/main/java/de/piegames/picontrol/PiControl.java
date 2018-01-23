@@ -5,14 +5,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +32,7 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import de.piegames.picontrol.CommandsCache.CacheElement;
 import de.piegames.picontrol.module.Module;
 import de.piegames.picontrol.state.VoiceState;
 import de.piegames.picontrol.tts.MutedSpeechEngine;
@@ -84,12 +84,16 @@ public class PiControl {
 	}
 
 	public void reload() {
+		// TODO make downloading a bit less ugly. Separate it from the main code so that the application can launch without any correcly working speech
+		// recognition.
+
+		// Close modules
 		pauseRecognizer();
-		// TODO clean up
 		log.info("Reloading all modules");
 		modules.values().forEach(Module::close);
 		modules.clear();
 
+		// Load config
 		JsonObject config;
 		try {
 			config = new JsonParser().parse(Files.newBufferedReader(Paths.get("config.json").toAbsolutePath())).getAsJsonObject();
@@ -98,6 +102,8 @@ public class PiControl {
 			exitApplication();
 			return;
 		}
+
+		// Load TTS engine
 		try {
 			tts = (SpeechEngine) Class.forName(config.getAsJsonPrimitive("speech-synth").getAsString())
 					.getConstructor(PiControl.class)
@@ -107,9 +113,12 @@ public class PiControl {
 			tts = new MutedSpeechEngine(this);
 		}
 
+		// Initialise sate machine
+
 		// config.getAsJsonArray("activation-commands")
 		stateMachine = new VoiceState<>();
 
+		// Load module
 		JsonObject modules = config.getAsJsonObject("modules");
 		for (JsonElement element : config.getAsJsonArray("active-modules")) {
 			try {
@@ -125,6 +134,7 @@ public class PiControl {
 			}
 		}
 
+		// Get all commands
 		Set<String> commands = stateMachine.getAllCommands();
 		if (commands.isEmpty()) {
 			log.fatal("No commands registered. This application cannot work without commands");
@@ -133,64 +143,45 @@ public class PiControl {
 		log.debug("All registered commands:\n" + String.join(System.getProperty("line.separator"), commands));
 		commands.remove(null);
 		commands.remove("");
-		Path lmPath = null;
-		Path dicPath = null;
-		// Check history for already compiled language models
+
+		// Check cache
+		CommandsCache cache = new CommandsCache(Paths.get("cache.json"));
 		int cacheSize = config.getAsJsonPrimitive("corpus-history-size").getAsInt();
-		if (cacheSize == 0)
-			log.debug("Caching disabled");
-		for (int i = 0; i < cacheSize; i++) {
-			try {
-				Set<String> corpus = new HashSet<>(Files.readAllLines(Paths.get("cached-" + i + ".corpus")));
-				corpus.remove(null);
-				corpus.remove("");
-				if (commands.equals(corpus)) {
-					log.debug("Cache hit");
-					lmPath = Paths.get("cached-" + i + ".lm");
-					dicPath = Paths.get("cached-" + i + ".dic");
-				}
-			} catch (NoSuchFileException e) {
-			} catch (IOException e) {
-				log.info("Could not read cache file " + i, e);
-			}
-		}
+		Path lmPath;
+		Path dicPath;
+		Path corpusPath;
 		try {
-			// TODO de-uglify this mess once it works
-			// Do this by putting the cache into one .json file to avoid messing with the file system too much
-			if (lmPath == null || dicPath == null) {
-				Path corpus = Paths.get("cached-0.corpus");
-				long lastModifiedTime = 0;
-				int index = 0;
-				// Remove least used corpus from history
-				// TODO use config instead of hardcoded 10
-				for (int i = 0; i < cacheSize; i++) {
-					Path p = Paths.get("cached-" + i + ".corpus");
-					try {
-						if (Files.getLastModifiedTime(p).toMillis() > lastModifiedTime) {
-							lastModifiedTime = Files.getLastModifiedTime(p).toMillis();
-							corpus = p;
-							index = i;
-						} else {
-							corpus = p;
-							index = i;
-							break;
-						}
-					} catch (NoSuchFileException e) {
-					} catch (IOException e) {
-						log.info("Could not read cache file " + i, e);
-					}
-				}
-				lmPath = Paths.get("cached-" + index + ".lm");
-				dicPath = Paths.get("cached-" + index + ".dic");
-				// Write them to corpus file
-				Files.write(corpus, commands);
+			lmPath = Files.createTempFile("cached", ".lm");
+			dicPath = Files.createTempFile("cached", ".dic");
+			corpusPath = Files.createTempFile("cached", ".corpus");
+		} catch (IOException e1) {
+			log.fatal("Could not create any temp files and they are sadly required to load the speech recognition (blame them)!", e1);
+			exitApplication();
+			/* The reason that the temp files are required is that Sphinx only takes URLs as resources in its configuration. If there is a way around saving the
+			 * data to a file just to reload it, please add it. (The only currently know option is to register an own URL scheme which is not worth the
+			 * trouble.) */
+			return;
+		}
+
+		Optional<CacheElement> hit = cache.check(commands);
+		if (hit.isPresent()) {
+			try {
+				Files.write(dicPath, hit.get().dic.getBytes());
+				Files.write(lmPath, hit.get().lm.getBytes());
+			} catch (IOException e) {
+				log.fatal("Write the temp files failed", e);
+				exitApplication();
+			}
+		} else {
+			try {
+				Files.write(corpusPath, commands);
 
 				HttpClient client = new DefaultHttpClient();
 				String downloadURL;
 				{
 					MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
 					entity.addPart("formtype", new StringBody("simple"));
-					entity.addPart("corpus", new FileBody(corpus.toFile()));
+					entity.addPart("corpus", new FileBody(corpusPath.toFile()));
 
 					log.debug("Uploading corpus file to \"http://www.speech.cs.cmu.edu/cgi-bin/tools/lmtool/run\". Visit \"http://www.speech.cs.cmu.edu/tools/lmtool.html\" for more information.");
 					HttpPost post = new HttpPost("http://www.speech.cs.cmu.edu/cgi-bin/tools/lmtool/run");
@@ -224,7 +215,17 @@ public class PiControl {
 					log.debug("Downloading the dictionary file from " + downloadURL + "/" + baseName + ".dic");
 					IOUtils.copy(new URL(downloadURL + "/" + baseName + ".dic").openStream(), Files.newOutputStream(dicPath));
 				}
+
+				// But that thing back to cache and write it
+				cache.addToCache(commands, new String(Files.readAllBytes(lmPath)), new String(Files.readAllBytes(dicPath)));
+				cache.saveToFile(cacheSize);
+			} catch (IOException e) {
+				log.fatal("Could not download the language model and/or dictionary required to recognize any spoken speech", e);
+				exitApplication();
 			}
+		}
+
+		try {
 			// Configure stt
 			Configuration sphinxConfig = new Configuration();
 			sphinxConfig.setAcousticModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us");
@@ -236,7 +237,6 @@ public class PiControl {
 			log.fatal("Something went wrong when trying to create the speech recogniser", e);
 			exitApplication();
 		}
-
 		startRecognizer();
 	}
 
