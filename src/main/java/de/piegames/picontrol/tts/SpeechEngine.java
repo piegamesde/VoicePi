@@ -23,7 +23,7 @@ public abstract class SpeechEngine {
 	public abstract AudioInputStream generateAudio(String text);
 
 	public void speakAndWait(String text) {
-		control.pauseRecognizer();
+		control.getSTT().pauseRecognition();
 		log.info("Saying: '" + text + "'");
 		AudioInputStream ais = generateAudio(text);
 		if (ais == null)
@@ -44,6 +44,6 @@ public abstract class SpeechEngine {
 		} catch (IOException | LineUnavailableException e) {
 			log.warn("Could not speak text: ", e);
 		}
-		control.startRecognizer();
+		control.getSTT().resumeRecognition();
 	}
 }

@@ -4,8 +4,13 @@
 			"command": "bash check_internet.sh",
 			"stdout-to-tts": "true"
 		},
+		"WHERE ARE YOU": {
+			"say-before-executing": "You are at",
+			"command": "bash tell_ip.sh",
+			"stdout-to-tts": "true"
+		},
 		"YOU IP": {
-			"say-before-executing": "Your I_P's are: ",
+			"say-before-executing": "Your I_P's are:",
 			"command": "bash tell_ip.sh",
 			"stdout-to-tts": "true"
 		},

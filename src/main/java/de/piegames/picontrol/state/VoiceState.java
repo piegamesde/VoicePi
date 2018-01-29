@@ -4,12 +4,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
-import de.piegames.picontrol.module.Module;
 
 public class VoiceState<T> {
 

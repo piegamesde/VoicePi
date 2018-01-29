@@ -43,7 +43,7 @@ public abstract class Module {
 
 	public abstract MutableValueGraph<ContextState<Module>, Set<String>> listCommands(ContextState<Module> root);
 
-	public abstract void commandSpoken(ContextState<Module> currentState, String command);
+	public abstract void onCommandSpoken(ContextState<Module> currentState, String command);
 
 	public void close() {
 	}

@@ -39,7 +39,7 @@ public class ApplicationModule extends Module {
 	}
 
 	@Override
-	public void commandSpoken(ContextState<Module> currentState, String command) {
+	public void onCommandSpoken(ContextState<Module> currentState, String command) {
 		if (exit.contains(command))
 			control.exitApplication();
 		else if (reload.contains(command))

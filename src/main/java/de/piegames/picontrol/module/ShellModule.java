@@ -19,7 +19,7 @@ public class ShellModule extends Module {
 	public ShellModule(PiControl control, String name, Path base) throws RuntimeException {
 		super(control, name, base);
 		config.getAsJsonObject("commands").entrySet().stream()
-				.forEach(e -> commands.put(e.getKey(), new Command(e.getValue(), control.getTTS(), this.basePath.toFile())));
+				.forEach(e -> commands.put(e.getKey(), new Command(e.getValue(), control, this.basePath.toFile())));
 	}
 
 	@Override
@@ -31,7 +31,7 @@ public class ShellModule extends Module {
 	}
 
 	@Override
-	public void commandSpoken(ContextState<Module> currentState, String command) {
+	public void onCommandSpoken(ContextState<Module> currentState, String command) {
 		try {
 			commands.get(command).execute();
 		} catch (IOException e) {
