@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import de.piegames.picontrol.module.Module;
@@ -171,21 +172,15 @@ public class PiControl {
 		return stt;
 	}
 
-	public static void main(String... args) {
+	public static void main(String... args) throws IOException, UnsupportedAudioFileException {
 		Configuration config = new Configuration();
 		try {
 			config.loadConfig(Paths.get("config.json"));
 		} catch (IOException e) {
 			e.printStackTrace();
-			return;
+			config.loadDefault();
 		}
-		// config.setSTT(new DeafRecognizer(null));
 		PiControl control = new PiControl(config);
 		control.run();
-		// control.resume();
-		//
-		// control.onCommandSpoken("TEST");
-		// control.onCommandSpoken("WHERE ARE YOU");
-		// control.onCommandSpoken("YOU IP");
 	}
 }

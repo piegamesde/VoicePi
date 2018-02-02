@@ -2,7 +2,8 @@
 	"activation-commands": [
 		"horst",
 		"jack",
-		"kevin"
+		"kevin",
+		"TEST"
 	],
 	"active-modules": [
 		"pi-control",
