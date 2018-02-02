@@ -1,5 +1,6 @@
 package de.piegames.picontrol.state;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -14,6 +15,7 @@ public class VoiceState<T> {
 	protected final Log											log		= LogFactory.getLog(getClass());
 	protected final ContextState<T>								root	= new ContextState<T>("root");
 	protected ContextState<T>									current	= root;
+	protected ContextState<T>									start	= root;
 	protected MutableValueGraph<ContextState<T>, Set<String>>	states	= ValueGraphBuilder.directed().build();
 
 	public VoiceState() {
@@ -21,6 +23,28 @@ public class VoiceState<T> {
 
 	public ContextState<T> getRoot() {
 		return root;
+	}
+
+	public ContextState<T> getStart() {
+		return start;
+	}
+
+	public void setActivationCommands(Set<String> commands) {
+		if (start != root)
+			states.removeNode(start);
+		if (commands == null) {
+			log.debug("Disabling activation commands");
+			if (current == start)
+				current = root;
+			start = root;
+			return;
+		}
+		log.debug("Setting activation commands to " + Arrays.toString(commands.toArray()));
+		start = new ContextState<T>("listening");
+		states.addNode(start);
+		states.putEdgeValue(start, root, commands);
+		if (current == root)
+			current = start;
 	}
 
 	public void addModuleGraph(MutableValueGraph<ContextState<T>, Set<String>> graph) {
@@ -57,7 +81,7 @@ public class VoiceState<T> {
 			if (states.edgeValue(current, node).get().contains(command)) {
 				current = node;
 				if (states.outDegree(current) == 0)
-					current = root; // TODO not set new state yet
+					current = start; // TODO not set new state yet
 				return node.owner;
 			}
 		return null;

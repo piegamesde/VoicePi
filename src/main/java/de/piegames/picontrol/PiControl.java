@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import de.piegames.picontrol.module.Module;
@@ -37,7 +39,6 @@ public class PiControl {
 	}
 
 	public void run() {
-		resume();
 		while (!exit) {
 			try {
 				Collection<String> spoken = stt.nextCommand();
@@ -95,8 +96,11 @@ public class PiControl {
 		modules.clear();
 
 		// Initialize state machine
-		// config.getAsJsonArray("activation-commands") // TODO activation commands
 		stateMachine = new VoiceState<>();
+		stateMachine.setActivationCommands(
+				StreamSupport.stream(config.getConfig().getAsJsonArray("activation-commands").spliterator(), false)
+						.map(m -> m.getAsString())
+						.collect(Collectors.toSet()));
 
 		modules.putAll(Optional.ofNullable(config.getModules()).orElse(config.loadModulesFromConfig(this)));
 		modules.forEach((name, module) -> {
@@ -128,6 +132,7 @@ public class PiControl {
 
 			if (stt == null)
 				stt = new DeafRecognizer(null);
+			stt.resumeRecognition();
 		}
 		{ // Load TTS
 			// TODO use Optional

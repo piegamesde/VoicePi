@@ -41,15 +41,11 @@ public class SphinxRecognizer extends SpeechRecognizer {
 	public void load(Set<String> commands) throws IOException {
 		// Check cache
 		CommandsCache cache = new CommandsCache(Paths.get("cache.json"));
+		cache.loadFromCache();
 		int cacheSize = config.getAsJsonPrimitive("corpus-history-size").getAsInt();
-		Path lmPath;
-		Path dicPath;
-		Path corpusPath;
-		lmPath = Files.createTempFile("cached", ".lm");
-		dicPath = Files.createTempFile("cached", ".dic");
-		corpusPath = Files.createTempFile("cached", ".corpus");
-		/* The reason that the temp files are required is that Sphinx only takes URLs as resources in its configuration. If there is a way around saving the
-		 * data to a file just to reload it, please add it. (The only currently know option is to register an own URL scheme which is not worth the trouble.) */
+		Path lmPath = Files.createTempFile("cached", ".lm");
+		Path dicPath = Files.createTempFile("cached", ".dic");
+		Path corpusPath = Files.createTempFile("cached", ".corpus");
 
 		Optional<CacheElement> hit = cache.check(commands);
 		if (hit.isPresent()) {
