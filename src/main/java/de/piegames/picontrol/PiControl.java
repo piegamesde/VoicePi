@@ -1,7 +1,7 @@
 package de.piegames.picontrol;
 
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.nio.file.NoSuchFileException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,9 +11,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import javax.sound.sampled.UnsupportedAudioFileException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.google.gson.JsonParseException;
 import de.piegames.picontrol.module.Module;
 import de.piegames.picontrol.state.VoiceState;
 import de.piegames.picontrol.stt.DeafRecognizer;
@@ -23,7 +23,7 @@ import de.piegames.picontrol.tts.SpeechEngine;
 
 public class PiControl {
 
-	protected final Log				log			= LogFactory.getLog(getClass());
+	protected static final Log		log			= LogFactory.getLog(PiControl.class);
 
 	protected boolean				listening	= false;
 	protected boolean				exit;
@@ -77,6 +77,7 @@ public class PiControl {
 			if (s.endsWith("</s>"))
 				s = s.substring(0, s.length() - 4);
 			s = s.trim();
+			// FIXME: activation command works properly, but the log is still wrong, thinking is was an illegal input
 			if ((responsible = stateMachine.commandSpoken(s)) != null) {
 				command = s;
 				break;
@@ -84,8 +85,11 @@ public class PiControl {
 		}
 		if (responsible != null)
 			responsible.onCommandSpoken(stateMachine.getCurrentState(), command);
-		else
+		else {
 			log.info("What you just said makes no sense, sorry");
+			log.debug("Current state: " + stateMachine.getCurrentState());
+			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+		}
 	}
 
 	public void reload() {
@@ -172,13 +176,24 @@ public class PiControl {
 		return stt;
 	}
 
-	public static void main(String... args) throws IOException, UnsupportedAudioFileException {
+	public static void main(String... args) {
+		// TODO add CLI
 		Configuration config = new Configuration();
 		try {
-			config.loadConfig(Paths.get("config.json"));
+			config.loadConfig();
+		} catch (NoSuchFileException e) {
+			log.error("Could not find config file at default path; loading default");
+			config.loadDefaultConfig();
+			try {
+				config.saveConfig();
+			} catch (IOException e1) {
+			}
+		} catch (JsonParseException e) {
+			log.error("Your config file is corrupt, please fix it or delete it", e);
+			return;
 		} catch (IOException e) {
-			e.printStackTrace();
-			config.loadDefault();
+			log.error("Could not load config file; loading default", e);
+			config.loadDefaultConfig();
 		}
 		PiControl control = new PiControl(config);
 		control.run();

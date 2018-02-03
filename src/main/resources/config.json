@@ -1,0 +1,36 @@
+{
+	"activation-commands": [
+		
+	],
+	"active-modules": [
+		"shell",
+		"application-control"
+	],
+	"tts": {
+		"class-name": "de.piegames.picontrol.tts.FreeSpeechEngine"
+	},
+	"stt": {
+		"class-name": "de.piegames.picontrol.stt.SphinxRecognizer"
+	},
+	"modules": {
+		"shell": {
+			"class-name": "de.piegames.picontrol.module.ShellModule",
+			"commands": {
+				"TEST": {
+					"command": "echo Hello world",
+					"stdout-to-tts": "true"
+				}
+			}
+		},
+		"application-control": {
+			"class-name": "de.piegames.picontrol.module.ApplicationModule",
+			"exit-commands": [
+				"EXIT"
+			],
+			"reload-commands": [
+				"RELOAD"
+			]
+		}
+	},
+	"corpus-history-size": 10
+}

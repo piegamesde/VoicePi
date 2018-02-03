@@ -1,11 +1,11 @@
 package de.piegames.picontrol.module;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+import com.google.gson.JsonObject;
 import de.piegames.picontrol.PiControl;
 import de.piegames.picontrol.state.ContextState;
 
@@ -14,8 +14,8 @@ public class ApplicationModule extends Module {
 	private Set<String> exit = new HashSet<>(), reload = new HashSet<>();
 	// Other possible commands: pause/resume, mute/unmute, ...
 
-	public ApplicationModule(PiControl control, String name, Path base) throws RuntimeException {
-		super(control, name, base);
+	public ApplicationModule(PiControl control, String name, JsonObject config) throws RuntimeException {
+		super(control, name, config);
 		config.getAsJsonArray("exit-commands").forEach(element -> exit.add(element.getAsString()));
 		config.getAsJsonArray("reload-commands").forEach(element -> reload.add(element.getAsString()));
 

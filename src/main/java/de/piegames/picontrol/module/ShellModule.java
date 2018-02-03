@@ -1,13 +1,13 @@
 package de.piegames.picontrol.module;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+import com.google.gson.JsonObject;
 import de.piegames.picontrol.Command;
 import de.piegames.picontrol.PiControl;
 import de.piegames.picontrol.state.ContextState;
@@ -16,10 +16,10 @@ public class ShellModule extends Module {
 
 	protected Map<String, Command> commands = new HashMap<>();
 
-	public ShellModule(PiControl control, String name, Path base) throws RuntimeException {
-		super(control, name, base);
+	public ShellModule(PiControl control, String name, JsonObject config) throws RuntimeException {
+		super(control, name, config);
 		config.getAsJsonObject("commands").entrySet().stream()
-				.forEach(e -> commands.put(e.getKey(), new Command(e.getValue(), control, this.basePath.toFile())));
+				.forEach(e -> commands.put(e.getKey(), new Command(e.getValue(), control)));
 	}
 
 	@Override

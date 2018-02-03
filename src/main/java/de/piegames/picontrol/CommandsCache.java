@@ -27,7 +27,7 @@ public class CommandsCache {
 	protected List<CacheElement>	cache	= new LinkedList<>();
 
 	public CommandsCache(Path path) {
-		log.debug("New cache file " + path.toAbsolutePath());
+		log.debug("Caching command data at " + path.toAbsolutePath());
 		this.path = Objects.requireNonNull(path);
 	}
 

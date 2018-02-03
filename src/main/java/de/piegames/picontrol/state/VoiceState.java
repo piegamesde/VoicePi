@@ -87,6 +87,14 @@ public class VoiceState<T> {
 		return null;
 	}
 
+	public boolean isActivationNeeded() {
+		return start != root && start.name.equals("listening");
+	}
+
+	public boolean isWaitingForActivation() {
+		return current == start && isActivationNeeded();
+	}
+
 	public ContextState<T> getCurrentState() {
 		return current;
 	}

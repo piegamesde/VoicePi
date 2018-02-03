@@ -2,9 +2,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.piegames</groupId>
-  <artifactId>VoiceControl</artifactId>
-  <name>VoiceControl</name>
+  <artifactId>picontrol</artifactId>
+  <name>PiControl</name>
   <version>0.1.0</version>
+  <description>A cross-platform voice control application primarily targetting Raspberry Pi</description>
+  <url>https://github.com/piegamesde/PiControl/</url>
+  <issueManagement>
+    <url>https://github.com/piegamesde/PiControl/issues</url>
+  </issueManagement>
   <build>
     <plugins>
       <plugin>
@@ -33,6 +38,22 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.5.3</version>
+        <executions>
+          <execution>
+            <id>create-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <descriptor>src/assembly/dep.xml</descriptor>
+        </configuration>
       </plugin>
     </plugins>
   </build>

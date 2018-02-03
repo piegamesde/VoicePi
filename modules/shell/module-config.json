@@ -1,8 +1,0 @@
-{
-	"commands": {
-		"TEST": {
-			"command": "echo Hello world",
-			"stdout-to-tts": "true"
-		}
-	}
-}

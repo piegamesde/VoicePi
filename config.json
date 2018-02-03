@@ -5,6 +5,12 @@
 		"kevin",
 		"TEST"
 	],
+	"tts": {
+		"class-name": "de.piegames.picontrol.tts.FreeSpeechEngine"
+	},
+	"stt": {
+		"class-name": "de.piegames.picontrol.stt.SphinxRecognizer"
+	},
 	"active-modules": [
 		"pi-control",
 		"shell",
@@ -13,13 +19,49 @@
 	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {
-			"class-name": "de.piegames.picontrol.module.ShellModule"
+			"class-name": "de.piegames.picontrol.module.ShellModule",
+			"commands": {
+				"TEST": {
+					"command": "echo Hello world",
+					"stdout-to-tts": "true"
+				}
+			}
 		},
 		"pi-control": {
-			"class-name": "de.piegames.picontrol.module.ShellModule"
+			"class-name": "de.piegames.picontrol.module.ShellModule",
+			"commands": {
+				"CHECK INTERNET": {
+					"command": "bash scripts/check_internet.sh",
+					"stdout-to-tts": "true"
+				},
+				"WHERE ARE YOU": {
+					"say-before-executing": "You are at",
+					"command": "bash scripts/tell_ip.sh",
+					"stdout-to-tts": "true"
+				},
+				"YOU IP": {
+					"say-before-executing": "Your I_P's are:",
+					"command": "bash scripts/tell_ip.sh",
+					"stdout-to-tts": "true"
+				},
+				"SHUT DOWN": {
+					"say-before-executing": "Goodbye",
+					"command": "shutdown now"
+				},
+				"RESTART": {
+					"say-before-executing": "See you later",
+					"command": "reboot"
+				}
+			}
 		},
 		"application-control": {
-			"class-name": "de.piegames.picontrol.module.ApplicationModule"
+			"class-name": "de.piegames.picontrol.module.ApplicationModule",
+			"exit-commands": [
+				"EXIT"
+			],
+			"reload-commands": [
+				"RELOAD"
+			]
 		}
 	},
 	"corpus-history-size": 10,

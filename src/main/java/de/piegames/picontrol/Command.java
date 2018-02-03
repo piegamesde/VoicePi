@@ -28,7 +28,7 @@ public class Command {
 	protected PiControl	control;
 	protected String	sayBeforeExecuting;
 
-	public Command(JsonElement element, PiControl control, File moduleHome) {
+	public Command(JsonElement element, PiControl control) {
 		this.control = Objects.requireNonNull(control);
 		// TODO Make config params constants
 		if (element.isJsonObject()) {
@@ -47,13 +47,7 @@ public class Command {
 		} else {
 			processCMD(element);
 		}
-		if (dir == null)
-			dir = moduleHome;
-		else if (!dir.isAbsolute())
-			dir = new File(moduleHome, dir.getPath());
-		System.out.println(sayBeforeExecuting);
-		System.out.println(tts);
-		System.out.println(dir);
+		dir = new File(".");
 	}
 
 	protected void processCMD(JsonElement element) {

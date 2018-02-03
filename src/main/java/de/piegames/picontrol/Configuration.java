@@ -1,6 +1,7 @@
 package de.piegames.picontrol;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -16,39 +18,42 @@ import de.piegames.picontrol.module.Module;
 import de.piegames.picontrol.stt.SpeechRecognizer;
 import de.piegames.picontrol.stt.SphinxRecognizer;
 import de.piegames.picontrol.tts.SpeechEngine;
-import io.gsonfire.builders.JsonObjectBuilder;
 
 public class Configuration {
 
 	protected final Log				log	= LogFactory.getLog(getClass());
 
+	protected final Path			path;
 	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig;
 	protected SpeechEngine			customTTS;
 	protected SpeechRecognizer		customSTT;
 	protected Map<String, Module>	customModules;
 
 	public Configuration() {
-		loadDefault();
+		this(null);
+	}
+
+	public Configuration(Path path) {
+		if (path == null)
+			path = getDefaultPath();
+		this.path = path;
 	}
 
 	public Path getDefaultPath() {
 		return Paths.get("config.json");
 	}
 
-	public void loadDefault() {
-		// Load default config
-		config = new JsonObjectBuilder()
-				.set("modules", modulesConfig = new JsonObject())
-				.set("stt", sttConfig = new JsonObject())
-				.set("tts", ttsConfig = new JsonObject())
-				.build();
+	public void loadDefaultConfig() {
+		log.info("Loading default configuration");
+		config = new JsonParser().parse(new InputStreamReader(getClass().getResourceAsStream("config.json"))).getAsJsonObject();
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
 		ttsConfig = config.getAsJsonObject("stt");
 	}
 
-	public void loadConfig(Path path) throws IOException {
+	public void loadConfig() throws IOException {
 		// Load config
+		log.info("Loading configuration from file " + path.toAbsolutePath());
 		config = new JsonParser().parse(Files.newBufferedReader(Paths.get("config.json").toAbsolutePath())).getAsJsonObject();
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
@@ -72,7 +77,8 @@ public class Configuration {
 	}
 
 	public void saveConfig() throws IOException {
-		// TODO
+		log.info("Saving configuration to " + path.toAbsolutePath());
+		Files.write(path, new GsonBuilder().setPrettyPrinting().create().toJson(config).getBytes());
 	}
 
 	public Map<String, Module> loadModulesFromConfig(PiControl control) {
@@ -81,10 +87,11 @@ public class Configuration {
 		for (JsonElement element : config.getAsJsonArray("active-modules")) {
 			try {
 				String moduleName = element.getAsString();
-				Module module = (Module) Class.forName(getModuleConfig(moduleName)
+				JsonObject moduleConfig = getModuleConfig(moduleName);
+				Module module = (Module) Class.forName(moduleConfig
 						.getAsJsonPrimitive("class-name").getAsString())
-						.getConstructor(PiControl.class, String.class, Path.class)
-						.newInstance(control, element.getAsString(), Paths.get("modules"));
+						.getConstructor(PiControl.class, String.class, JsonObject.class)
+						.newInstance(control, moduleName, moduleConfig);
 				ret.put(moduleName, module);
 			} catch (Throwable e) {
 				log.warn("Could not instantiate module " + element.getAsString(), e);
