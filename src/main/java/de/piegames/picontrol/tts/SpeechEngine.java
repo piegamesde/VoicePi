@@ -23,27 +23,29 @@ public abstract class SpeechEngine {
 	public abstract AudioInputStream generateAudio(String text);
 
 	public void speakAndWait(String text) {
-		control.getSTT().pauseRecognition();
 		log.info("Saying: '" + text + "'");
 		AudioInputStream ais = generateAudio(text);
 		if (ais == null)
 			return;
 		try {
-			AudioFormat audioFormat = ais.getFormat();
-			SourceDataLine line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(SourceDataLine.class, audioFormat));
-			line.open(audioFormat);
-			line.start();
-
-			int count = 0;
-			byte[] data = new byte[65532];
-			while ((count = ais.read(data)) != -1)
-				line.write(data, 0, count);
-
-			line.drain();
-			line.close();
+			playSound(ais);
 		} catch (IOException | LineUnavailableException e) {
 			log.warn("Could not speak text: ", e);
 		}
-		control.getSTT().resumeRecognition();
+	}
+
+	public static void playSound(AudioInputStream ais) throws LineUnavailableException, IOException {
+		AudioFormat audioFormat = ais.getFormat();
+		SourceDataLine line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(SourceDataLine.class, audioFormat));
+		line.open(audioFormat);
+		line.start();
+
+		int count = 0;
+		byte[] data = new byte[65532];
+		while ((count = ais.read(data)) != -1)
+			line.write(data, 0, count);
+
+		line.drain();
+		line.close();
 	}
 }

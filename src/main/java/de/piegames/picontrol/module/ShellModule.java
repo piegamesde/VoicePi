@@ -8,18 +8,18 @@ import java.util.Set;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
-import de.piegames.picontrol.Command;
 import de.piegames.picontrol.PiControl;
+import de.piegames.picontrol.action.Action;
 import de.piegames.picontrol.state.ContextState;
 
 public class ShellModule extends Module {
 
-	protected Map<String, Command> commands = new HashMap<>();
+	protected Map<String, Action> commands = new HashMap<>();
 
 	public ShellModule(PiControl control, String name, JsonObject config) throws RuntimeException {
 		super(control, name, config);
 		config.getAsJsonObject("commands").entrySet().stream()
-				.forEach(e -> commands.put(e.getKey(), new Command(e.getValue(), control)));
+				.forEach(e -> commands.put(e.getKey(), Action.fromJson(e.getValue().getAsJsonObject(), control)));
 	}
 
 	@Override

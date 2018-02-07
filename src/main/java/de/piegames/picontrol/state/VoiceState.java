@@ -32,7 +32,7 @@ public class VoiceState<T> {
 	public void setActivationCommands(Set<String> commands) {
 		if (start != root)
 			states.removeNode(start);
-		if (commands == null) {
+		if (commands == null || commands.isEmpty()) {
 			log.debug("Disabling activation commands");
 			if (current == start)
 				current = root;
@@ -75,14 +75,16 @@ public class VoiceState<T> {
 	 *
 	 * If the new state has no outgoing edges it will set the new current state to be root. If no registered command is found, the internal state does not
 	 * change and it returns null.
+	 *
+	 * @return the (new) current state or {@code null} if it didn't change.
 	 */
-	public T commandSpoken(String command) {
+	public ContextState<T> commandSpoken(String command) {
 		for (ContextState<T> node : states.successors(current))
 			if (states.edgeValue(current, node).get().contains(command)) {
 				current = node;
 				if (states.outDegree(current) == 0)
 					current = start; // TODO not set new state yet
-				return node.owner;
+				return node;
 			}
 		return null;
 	}
@@ -114,5 +116,9 @@ public class VoiceState<T> {
 	/** Get all commands from all edges of the graph */
 	public Set<String> getAllCommands() {
 		return states.edges().stream().flatMap(edge -> states.edgeValue(edge.source(), edge.target()).get().stream()).collect(Collectors.toSet());
+	}
+
+	public void resetState() {
+		current = start;
 	}
 }

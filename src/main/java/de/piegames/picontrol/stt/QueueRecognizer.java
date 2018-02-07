@@ -29,7 +29,12 @@ public class QueueRecognizer extends SpeechRecognizer {
 	}
 
 	@Override
-	public Collection<String> nextCommand() throws Exception {
-		return spoken.take();
+	public void run() {
+		while (!Thread.currentThread().isInterrupted())
+			try {
+				commandsSpoken.add(spoken.take());
+			} catch (InterruptedException e) {
+				break;
+			}
 	}
 }

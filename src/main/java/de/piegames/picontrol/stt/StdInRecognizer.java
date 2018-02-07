@@ -2,7 +2,6 @@ package de.piegames.picontrol.stt;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Scanner;
 import java.util.Set;
 import com.google.gson.JsonObject;
@@ -21,7 +20,16 @@ public class StdInRecognizer extends SpeechRecognizer {
 	}
 
 	@Override
-	public Collection<String> nextCommand() throws Exception {
-		return Arrays.asList(scanner.nextLine());
+	public void run() {
+		while (!Thread.currentThread().isInterrupted())
+			commandsSpoken.add(Arrays.asList(scanner.nextLine()));
+	}
+
+	@Override
+	public void stopRecognition() {
+		thread.interrupt();
+		Thread.yield();
+		// It was either this, or active waiting in the run() method. I opted for the shorter solution
+		thread.stop();
 	}
 }

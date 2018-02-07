@@ -1,8 +1,6 @@
 package de.piegames.picontrol.stt;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 import com.google.gson.JsonObject;
 
@@ -21,8 +19,11 @@ public class DeafRecognizer extends SpeechRecognizer {
 	}
 
 	@Override
-	public Collection<String> nextCommand() throws Exception {
-		Thread.sleep(100);
-		return Collections.emptySet();
+	public void run() {
+		try {
+			new Object().wait();
+		} catch (InterruptedException e) {
+			return;
+		}
 	}
 }

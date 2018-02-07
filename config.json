@@ -1,9 +1,27 @@
 {
+	"on-start": {
+		"action": "say-text",
+		"text": "Starting PiControl"
+	},
+	"on-exit": {
+		"action": "say-text",
+		"text": "Stopping PiControl"
+	},
+	"on-activation": {
+		"action": "say-text",
+		"text": "Yes, sir"
+	},
+	"on-timeout": {
+		"action": "play-sound",
+		"soundfile": "sounds/timeout.wav"
+	},
+	"timeout": 30,
+	"on-wrong-command": {
+		"action": "play-sound",
+		"soundfile": "sounds/error.wav"
+	},
 	"activation-commands": [
-		"horst",
-		"jack",
-		"kevin",
-		"TEST"
+		"KEVIN"
 	],
 	"tts": {
 		"class-name": "de.piegames.picontrol.tts.FreeSpeechEngine"
@@ -16,12 +34,14 @@
 		"shell",
 		"application-control"
 	],
+	"pause-stt-when-tts": "true",
 	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {
 			"class-name": "de.piegames.picontrol.module.ShellModule",
 			"commands": {
 				"TEST": {
+					"action": "run-command",
 					"command": "echo Hello world",
 					"stdout-to-tts": "true"
 				}
@@ -31,26 +51,33 @@
 			"class-name": "de.piegames.picontrol.module.ShellModule",
 			"commands": {
 				"CHECK INTERNET": {
+					"action": "run-command",
 					"command": "bash scripts/check_internet.sh",
 					"stdout-to-tts": "true"
 				},
 				"WHERE ARE YOU": {
+					"action": "run-command",
 					"say-before-executing": "You are at",
 					"command": "bash scripts/tell_ip.sh",
 					"stdout-to-tts": "true"
 				},
 				"YOU IP": {
+					"action": "run-command",
 					"say-before-executing": "Your I_P's are:",
 					"command": "bash scripts/tell_ip.sh",
 					"stdout-to-tts": "true"
 				},
 				"SHUT DOWN": {
+					"action": "run-command",
 					"say-before-executing": "Goodbye",
-					"command": "shutdown now"
+					"command": "shutdown now",
+					"await-termination": "true"
 				},
 				"RESTART": {
+					"action": "run-command",
 					"say-before-executing": "See you later",
-					"command": "reboot"
+					"command": "reboot",
+					"await-termination": "true"
 				}
 			}
 		},

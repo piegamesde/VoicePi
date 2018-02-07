@@ -1,35 +1,30 @@
-package de.piegames.picontrol;
+package de.piegames.picontrol.action;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.stream.Collectors;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import de.piegames.picontrol.PiControl;
 
 /**
  * This class represents a shell command that can be executed including all options to start and handle the process. The data is parsed from a JsonElement that
  * holds all the settings as specified in TODO.
  */
-public class Command {
-
-	protected final Log	log	= LogFactory.getLog(getClass());
+public class RunCommand extends Action {
 
 	protected String[]	cmd;
 	protected String[]	env;
 	protected File		dir;
 	protected boolean	waitFor;
 	protected boolean	tts;
-	protected PiControl	control;
 	protected String	sayBeforeExecuting;
 
-	public Command(JsonElement element, PiControl control) {
-		this.control = Objects.requireNonNull(control);
+	public RunCommand(JsonObject element, PiControl control) {
+		super(ActionType.RUN_COMMAND, element, control);
 		// TODO Make config params constants
 		if (element.isJsonObject()) {
 			JsonObject elem = element.getAsJsonObject();
@@ -76,19 +71,22 @@ public class Command {
 		}
 	}
 
+	@Override
 	public void execute() throws IOException, InterruptedException {
 		if (sayBeforeExecuting != null)
 			control.getTTS().speakAndWait(sayBeforeExecuting);
-		log.debug("Executing " + Arrays.toString(cmd) + ", " + Arrays.toString(env) + " at " + dir);
+		log.debug("Executing " + Arrays.toString(cmd) + ", " + Arrays.toString(env) + " at " + dir + ":");
 		Process process = cmd.length > 1 ? Runtime.getRuntime().exec(cmd, env, dir) : Runtime.getRuntime().exec(cmd[0], env, dir);
-		if (tts) {
+		if (tts || waitFor)
 			try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
 				String line;
 				while ((line = reader.readLine()) != null) {
-					control.getTTS().speakAndWait(line);
+					if (tts)
+						control.getTTS().speakAndWait(line);
+					else
+						log.debug(">" + line);
 				}
 			}
-		}
 
 		if (waitFor)
 			process.waitFor();

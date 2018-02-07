@@ -108,34 +108,50 @@ public class SphinxRecognizer extends SpeechRecognizer {
 	}
 
 	@Override
-	public Collection<String> nextCommand() throws Exception {
+	public void run() {
 		SpeechResult result;
-		if ((result = stt.getResult()) != null) {
-			log.info("You said: " + result.getHypothesis());
-			Collection<String> best = result.getNbest(Integer.MAX_VALUE);
-			// TODO actually sort them by quality
-			return best;
-		} else
-			return null;
+		while (!Thread.currentThread().isInterrupted()) {
+			if ((result = stt.getResult()) != null) {
+				log.info("You said: " + result.getHypothesis());
+				Collection<String> best = result.getNbest(Integer.MAX_VALUE);
+				// TODO actually sort them by quality
+				commandsSpoken.offer(best);
+			}
+		}
 	}
 
 	@Override
-	public void pauseRecognition() {
-		// Don't listen for anything said
-		stt.stopRecognition();
-		// TODO check if getResult() throws an Exception when run concurrently
-	}
-
-	@Override
-	public void resumeRecognition() {
-		// Continue listening for anything said
+	public void startRecognition() {
 		stt.startRecognition(true);
+		thread = new Thread(this);
+		thread.start();
 	}
 
 	@Override
 	public void stopRecognition() {
-		// Stop everything and deallocate
 		stt.stopRecognition();
-		// Deallocate
+		thread.interrupt();
+		Thread.yield();
+		// Sorry, no other possibility here. Sphinx does not provide anything to stop it while recognizing.
+		thread.stop();
+	}
+
+	@Override
+	public void pauseRecognition() {
+		// startRecognition();
+		stt.stopRecognition();
+		// TODO starting and stopping takes quite a lot of time. Instead, don't stop it and just discard the results. (This needs to be tested because it might
+		// not work)
+	}
+
+	@Override
+	public void resumeRecognition() {
+		// stopRecognition();
+		stt.startRecognition(true);
+	}
+
+	@Override
+	public void unload() {
+		stt = null;
 	}
 }

@@ -9,12 +9,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonParseException;
 import de.piegames.picontrol.module.Module;
+import de.piegames.picontrol.state.ContextState;
 import de.piegames.picontrol.state.VoiceState;
 import de.piegames.picontrol.stt.DeafRecognizer;
 import de.piegames.picontrol.stt.SpeechRecognizer;
@@ -42,12 +44,12 @@ public class PiControl {
 	public void run() {
 		while (!exit) {
 			try {
-				Collection<String> spoken = stt.nextCommand();
+				Collection<String> spoken = stt.commandsSpoken.poll(config.getConfig().getAsJsonPrimitive("timeout").getAsInt(), TimeUnit.SECONDS);
 				if (spoken != null)
 					onCommandSpoken(spoken);
 				else {
-					log.info("Nothing spoken. Did you disable your microphone? Waiting for 5s");
-					Thread.sleep(5000);// TODO sleep for less long, but only log the first time to not spam the console.
+					log.info("Timed out");
+					stateMachine.resetState();
 				}
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -70,6 +72,7 @@ public class PiControl {
 	public void onCommandSpoken(Collection<String> possibleCommand) {
 		possibleCommand.stream().forEach(System.out::println);
 		Module responsible = null;
+		ContextState<Module> state = null;
 		String command = null;
 		for (String s : possibleCommand) {
 			if (s.startsWith("<s>"))
@@ -77,11 +80,17 @@ public class PiControl {
 			if (s.endsWith("</s>"))
 				s = s.substring(0, s.length() - 4);
 			s = s.trim();
-			// FIXME: activation command works properly, but the log is still wrong, thinking is was an illegal input
-			if ((responsible = stateMachine.commandSpoken(s)) != null) {
+
+			if (stateMachine.commandSpoken(s) != null) {
+				state = stateMachine.getCurrentState();
+				responsible = state.owner;
 				command = s;
 				break;
 			}
+		}
+		if (state == stateMachine.getRoot()) {
+			log.info("Activated.");
+			return;
 		}
 		if (responsible != null)
 			responsible.onCommandSpoken(stateMachine.getCurrentState(), command);
