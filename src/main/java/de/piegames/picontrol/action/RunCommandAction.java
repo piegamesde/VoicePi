@@ -14,7 +14,7 @@ import de.piegames.picontrol.PiControl;
  * This class represents a shell command that can be executed including all options to start and handle the process. The data is parsed from a JsonElement that
  * holds all the settings as specified in TODO.
  */
-public class RunCommand extends Action {
+public class RunCommandAction extends Action {
 
 	protected String[]	cmd;
 	protected String[]	env;
@@ -23,7 +23,7 @@ public class RunCommand extends Action {
 	protected boolean	tts;
 	protected String	sayBeforeExecuting;
 
-	public RunCommand(JsonObject element, PiControl control) {
+	public RunCommandAction(JsonObject element, PiControl control) {
 		super(ActionType.RUN_COMMAND, element, control);
 		// TODO Make config params constants
 		if (element.isJsonObject()) {

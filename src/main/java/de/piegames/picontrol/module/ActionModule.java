@@ -12,11 +12,11 @@ import de.piegames.picontrol.PiControl;
 import de.piegames.picontrol.action.Action;
 import de.piegames.picontrol.state.ContextState;
 
-public class ShellModule extends Module {
+public class ActionModule extends Module {
 
 	protected Map<String, Action> commands = new HashMap<>();
 
-	public ShellModule(PiControl control, String name, JsonObject config) throws RuntimeException {
+	public ActionModule(PiControl control, String name, JsonObject config) throws RuntimeException {
 		super(control, name, config);
 		config.getAsJsonObject("commands").entrySet().stream()
 				.forEach(e -> commands.put(e.getKey(), Action.fromJson(e.getValue().getAsJsonObject(), control)));

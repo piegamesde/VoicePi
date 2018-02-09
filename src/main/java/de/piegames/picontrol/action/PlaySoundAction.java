@@ -13,8 +13,8 @@ public class PlaySoundAction extends Action {
 
 	protected String soundfile;
 
-	public PlaySoundAction(ActionType type, JsonObject data, PiControl control) {
-		super(type, data, control);
+	public PlaySoundAction(JsonObject data, PiControl control) {
+		super(ActionType.PLAY_SOUND, data, control);
 		soundfile = data.getAsJsonPrimitive("soundfile").getAsString();
 	}
 

@@ -15,6 +15,9 @@
 		"action": "play-sound",
 		"soundfile": "sounds/timeout.wav"
 	},
+	"on-reload": {
+		"action": "none"
+	},
 	"timeout": 30,
 	"on-wrong-command": {
 		"action": "play-sound",
@@ -34,7 +37,6 @@
 		"shell",
 		"application-control"
 	],
-	"pause-stt-when-tts": "true",
 	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {

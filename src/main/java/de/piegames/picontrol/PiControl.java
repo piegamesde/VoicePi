@@ -92,9 +92,11 @@ public class PiControl {
 			log.info("Activated.");
 			return;
 		}
-		if (responsible != null)
+		if (responsible != null) {
+			stt.pauseRecognition();
 			responsible.onCommandSpoken(stateMachine.getCurrentState(), command);
-		else {
+			stt.resumeRecognition();
+		} else {
 			log.info("What you just said makes no sense, sorry");
 			log.debug("Current state: " + stateMachine.getCurrentState());
 			log.debug("Available commands: " + stateMachine.getAvailableCommands());
@@ -103,8 +105,10 @@ public class PiControl {
 
 	public void reload() {
 		// Close modules
-		if (stt != null)
+		if (stt != null) {
 			stt.stopRecognition();
+			stt.unload();
+		}
 		log.info("Reloading all modules");
 		modules.values().forEach(Module::close);
 		modules.clear();
@@ -141,12 +145,12 @@ public class PiControl {
 					stt.load(commands);
 			} catch (IOException e) {
 				log.error("Could not load the speech recognition module; switching to DeafRecognizer", e);
-				stt = null; // TODO
+				stt = null;
 			}
 
 			if (stt == null)
 				stt = new DeafRecognizer(null);
-			stt.resumeRecognition();
+			stt.startRecognition();
 		}
 		{ // Load TTS
 			// TODO use Optional
@@ -158,13 +162,13 @@ public class PiControl {
 		}
 	}
 
-	public void pause() {
-		stt.pauseRecognition();
-	}
-
-	public void resume() {
-		stt.resumeRecognition();
-	}
+	// public void pause() {
+	// stt.pauseRecognition();
+	// }
+	//
+	// public void resume() {
+	// stt.resumeRecognition();
+	// }
 
 	public void exitApplication() {
 		if (exit) // Application already stopped
@@ -172,6 +176,7 @@ public class PiControl {
 		exit = true;
 		log.info("Stopping speech recognition");
 		stt.stopRecognition();
+		stt.unload();
 		modules.values().forEach(Module::close);
 		log.info("Quitting application");
 		System.exit(0);

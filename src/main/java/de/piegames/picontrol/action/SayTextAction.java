@@ -4,12 +4,12 @@ import java.io.IOException;
 import com.google.gson.JsonObject;
 import de.piegames.picontrol.PiControl;
 
-
 public class SayTextAction extends Action {
 
 	protected String text;
-	public SayTextAction(ActionType type, JsonObject data, PiControl control) {
-		super(type, data, control);
+
+	public SayTextAction(JsonObject data, PiControl control) {
+		super(ActionType.SAY_TEXT, data, control);
 		text = data.getAsJsonPrimitive("text").getAsString();
 	}
 
