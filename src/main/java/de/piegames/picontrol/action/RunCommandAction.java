@@ -23,8 +23,8 @@ public class RunCommandAction extends Action {
 	protected boolean	tts;
 	protected String	sayBeforeExecuting;
 
-	public RunCommandAction(JsonObject element, PiControl control) {
-		super(ActionType.RUN_COMMAND, element, control);
+	public RunCommandAction(JsonObject element) {
+		super(ActionType.RUN_COMMAND, element);
 		// TODO Make config params constants
 		if (element.isJsonObject()) {
 			JsonObject elem = element.getAsJsonObject();
@@ -72,7 +72,7 @@ public class RunCommandAction extends Action {
 	}
 
 	@Override
-	public void execute() throws IOException, InterruptedException {
+	public void execute(PiControl control) throws IOException, InterruptedException {
 		if (sayBeforeExecuting != null)
 			control.getTTS().speakAndWait(sayBeforeExecuting);
 		log.debug("Executing " + Arrays.toString(cmd) + ", " + Arrays.toString(env) + " at " + dir + ":");

@@ -10,11 +10,16 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import de.piegames.picontrol.action.Action;
+import de.piegames.picontrol.action.Action.ActionType;
+import de.piegames.picontrol.action.PlaySoundAction;
+import de.piegames.picontrol.action.RunCommandAction;
+import de.piegames.picontrol.action.SayTextAction;
 import de.piegames.picontrol.module.Module;
 import de.piegames.picontrol.state.ContextState;
 import de.piegames.picontrol.state.VoiceState;
@@ -22,6 +27,8 @@ import de.piegames.picontrol.stt.DeafRecognizer;
 import de.piegames.picontrol.stt.SpeechRecognizer;
 import de.piegames.picontrol.tts.MutedSpeechEngine;
 import de.piegames.picontrol.tts.SpeechEngine;
+import io.gsonfire.GsonFireBuilder;
+import io.gsonfire.TypeSelector;
 
 public class PiControl {
 
@@ -33,6 +40,7 @@ public class PiControl {
 	protected SpeechEngine			tts;
 	protected SpeechRecognizer		stt;
 	protected Map<String, Module>	modules		= new HashMap<>();
+	protected Settings				settings	= new Settings();
 
 	protected Configuration			config;
 
@@ -42,13 +50,15 @@ public class PiControl {
 	}
 
 	public void run() {
+		settings.onStart.execute(this, log, "onStart");
 		while (!exit) {
 			try {
-				Collection<String> spoken = stt.commandsSpoken.poll(config.getConfig().getAsJsonPrimitive("timeout").getAsInt(), TimeUnit.SECONDS);
+				Collection<String> spoken = stt.commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
 				if (spoken != null)
 					onCommandSpoken(spoken);
 				else {
 					log.info("Timed out");
+					settings.onTimeout.execute(this, log, "onTimeout");
 					stateMachine.resetState();
 				}
 			} catch (InterruptedException e) {
@@ -63,6 +73,7 @@ public class PiControl {
 				break;
 			}
 		}
+		settings.onExit.execute(this, log, "onExit");
 	}
 
 	public void onCommandSpoken(String command) {
@@ -90,6 +101,7 @@ public class PiControl {
 		}
 		if (state == stateMachine.getRoot()) {
 			log.info("Activated.");
+			settings.onActivation.execute(this, log, "onActivation");
 			return;
 		}
 		if (responsible != null) {
@@ -100,10 +112,13 @@ public class PiControl {
 			log.info("What you just said makes no sense, sorry");
 			log.debug("Current state: " + stateMachine.getCurrentState());
 			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+			settings.onWrongCommand.execute(this, log, "onWrongCommand");
 		}
 	}
 
 	public void reload() {
+		settings.onReload.execute(this, log, "onReload");
+
 		// Close modules
 		if (stt != null) {
 			stt.stopRecognition();
@@ -113,12 +128,22 @@ public class PiControl {
 		modules.values().forEach(Module::close);
 		modules.clear();
 
+		{ // Load Settings
+			// TODO use Optional
+			settings = config.getSettings();
+			if (settings == null)
+				settings = config.loadSettingsFromConfig();
+			if (settings == null)
+				settings = new Settings();
+		}
+
 		// Initialize state machine
 		stateMachine = new VoiceState<>();
-		stateMachine.setActivationCommands(
-				StreamSupport.stream(config.getConfig().getAsJsonArray("activation-commands").spliterator(), false)
-						.map(m -> m.getAsString())
-						.collect(Collectors.toSet()));
+		stateMachine.setActivationCommands(settings.activationCommands);
+		// stateMachine.setActivationCommands(
+		// StreamSupport.stream(config.getConfig().getAsJsonArray("activation-commands").spliterator(), false)
+		// .map(m -> m.getAsString())
+		// .collect(Collectors.toSet()));
 
 		modules.putAll(Optional.ofNullable(config.getModules()).orElse(config.loadModulesFromConfig(this)));
 		modules.forEach((name, module) -> {
@@ -190,6 +215,10 @@ public class PiControl {
 		return stt;
 	}
 
+	public Settings getSettings() {
+		return settings;
+	}
+
 	public static void main(String... args) {
 		// TODO add CLI
 		Configuration config = new Configuration();
@@ -212,4 +241,27 @@ public class PiControl {
 		PiControl control = new PiControl(config);
 		control.run();
 	}
+
+	public static final Gson GSON = new GsonFireBuilder()
+			.registerTypeSelector(Action.class, new TypeSelector<Action>() {
+
+				@Override
+				public Class<? extends Action> getClassForElement(JsonElement readElement) {
+					switch (ActionType.forName(readElement.getAsJsonObject().getAsJsonPrimitive("action").getAsString())) {
+						case RUN_COMMAND:
+							return RunCommandAction.class;
+						case SAY_TEXT:
+							return SayTextAction.class;
+						case PLAY_SOUND:
+							return PlaySoundAction.class;
+						case NONE:
+						default:
+							return Action.DoNothingAction.class;
+					}
+				}
+			})
+			.createGsonBuilder()
+			.setPrettyPrinting()
+			.setLenient()
+			.create();
 }

@@ -19,15 +19,25 @@ import de.piegames.picontrol.stt.SpeechRecognizer;
 import de.piegames.picontrol.stt.SphinxRecognizer;
 import de.piegames.picontrol.tts.SpeechEngine;
 
+/**
+ * This class manages the configuration file of the application, including loading saving and providing default values. Settings are mapped to JsonObject that
+ * can be requested and modified. Any modifications will be reflected in the configuration file when saving the next time.
+ *
+ * It also allows for overriding some of the values by calling the respective methods through code. This allows the configuration to be used without any real
+ * configuration file (load the defaults and then override them). This is especially useful for Unit Tests, but might come in handy for other scenarios too.
+ *
+ *
+ */
 public class Configuration {
 
 	protected final Log				log	= LogFactory.getLog(getClass());
 
 	protected final Path			path;
-	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig;
+	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig, settingsConfig;
 	protected SpeechEngine			customTTS;
 	protected SpeechRecognizer		customSTT;
 	protected Map<String, Module>	customModules;
+	protected Settings				customSettings;
 
 	public Configuration() {
 		this(null);
@@ -49,6 +59,7 @@ public class Configuration {
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
 		ttsConfig = config.getAsJsonObject("stt");
+		settingsConfig = config;
 	}
 
 	public void loadConfig() throws IOException {
@@ -58,6 +69,7 @@ public class Configuration {
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
 		ttsConfig = config.getAsJsonObject("stt");
+		settingsConfig = config;
 	}
 
 	public JsonObject getModuleConfig(String moduleName) {
@@ -70,6 +82,10 @@ public class Configuration {
 
 	public JsonObject getTTSConfig(String ttsName) {
 		return ttsConfig.getAsJsonObject(ttsName).getAsJsonObject();
+	}
+
+	public JsonObject getSettingsConfig() {
+		return settingsConfig;
 	}
 
 	public JsonObject getConfig() {
@@ -115,6 +131,10 @@ public class Configuration {
 		}
 	}
 
+	public Settings loadSettingsFromConfig() {
+		return PiControl.GSON.fromJson(settingsConfig, Settings.class);
+	}
+
 	public void setTTS(SpeechEngine tts) {
 		this.customTTS = tts;
 	}
@@ -127,6 +147,10 @@ public class Configuration {
 		this.customModules = modules;
 	}
 
+	public void setSettings(Settings settings) {
+		this.customSettings = settings;
+	}
+
 	public SpeechEngine getTTS() {
 		return customTTS;
 	}
@@ -137,5 +161,9 @@ public class Configuration {
 
 	public Map<String, Module> getModules() {
 		return customModules;
+	}
+
+	public Settings getSettings() {
+		return customSettings;
 	}
 }

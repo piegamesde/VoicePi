@@ -37,7 +37,6 @@
 		"shell",
 		"application-control"
 	],
-	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {
 			"class-name": "de.piegames.picontrol.module.ShellModule",

@@ -19,7 +19,7 @@ public class ActionModule extends Module {
 	public ActionModule(PiControl control, String name, JsonObject config) throws RuntimeException {
 		super(control, name, config);
 		config.getAsJsonObject("commands").entrySet().stream()
-				.forEach(e -> commands.put(e.getKey(), Action.fromJson(e.getValue().getAsJsonObject(), control)));
+				.forEach(e -> commands.put(e.getKey(), Action.fromJson(e.getValue().getAsJsonObject())));
 	}
 
 	@Override
@@ -33,7 +33,7 @@ public class ActionModule extends Module {
 	@Override
 	public void onCommandSpoken(ContextState<Module> currentState, String command) {
 		try {
-			commands.get(command).execute();
+			commands.get(command).execute(control);
 		} catch (IOException e) {
 			log.warn("Could not execute command '" + command + "'", e);
 		} catch (NullPointerException e) {

@@ -13,13 +13,13 @@ public class PlaySoundAction extends Action {
 
 	protected String soundfile;
 
-	public PlaySoundAction(JsonObject data, PiControl control) {
-		super(ActionType.PLAY_SOUND, data, control);
+	public PlaySoundAction(JsonObject data) {
+		super(ActionType.PLAY_SOUND, data);
 		soundfile = data.getAsJsonPrimitive("soundfile").getAsString();
 	}
 
 	@Override
-	public void execute() throws IOException, InterruptedException {
+	public void execute(PiControl control) throws IOException, InterruptedException {
 		try {
 			SpeechEngine.playSound(AudioSystem.getAudioInputStream(new File(soundfile)));
 		} catch (LineUnavailableException | UnsupportedAudioFileException e) {

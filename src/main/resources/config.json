@@ -1,10 +1,30 @@
 {
+	"on-start": {
+		"action": "say-text",
+		"text": "Starting PiControl"
+	},
+	"on-exit": {
+		"action": "say-text",
+		"text": "Stopping PiControl"
+	},
+	"on-activation": {
+		"action": "say-text",
+		"text": "Yes, sir"
+	},
+	"on-timeout": {
+		"action": "play-sound",
+		"soundfile": "sounds/timeout.wav"
+	},
+	"on-reload": {
+		"action": "none"
+	},
+	"timeout": 30,
+	"on-wrong-command": {
+		"action": "play-sound",
+		"soundfile": "sounds/error.wav"
+	},
 	"activation-commands": [
 		
-	],
-	"active-modules": [
-		"shell",
-		"application-control"
 	],
 	"tts": {
 		"class-name": "de.piegames.picontrol.tts.FreeSpeechEngine"
@@ -12,6 +32,10 @@
 	"stt": {
 		"class-name": "de.piegames.picontrol.stt.SphinxRecognizer"
 	},
+	"active-modules": [
+		"shell",
+		"application-control"
+	],
 	"modules": {
 		"shell": {
 			"class-name": "de.piegames.picontrol.module.ShellModule",

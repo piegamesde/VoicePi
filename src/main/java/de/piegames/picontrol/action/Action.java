@@ -19,34 +19,48 @@ public abstract class Action {
 		}
 	}
 
-	protected final ActionType	type;
-	protected PiControl			control;
+	protected final ActionType type;
 
-	public Action(ActionType type, JsonObject data, PiControl control) {
-		this.control = control;
+	public Action(ActionType type, JsonObject data) {
 		this.type = type;
 	}
 
-	public abstract void execute() throws IOException, InterruptedException;
+	public abstract void execute(PiControl control) throws IOException, InterruptedException;
 
-	public static Action fromJson(JsonObject json, PiControl control) {
+	public final void execute(PiControl control, Log log, String name) {
+		try {
+			execute(control);
+		} catch (IOException | InterruptedException e) {
+			log.warn("Could not execute Action " + name, e);
+		}
+	}
+
+	@Deprecated
+	public static Action fromJson(JsonObject json) {
 		switch (ActionType.forName(json.getAsJsonPrimitive("action").getAsString())) {
 			case RUN_COMMAND:
-				return new RunCommandAction(json, control);
+				return new RunCommandAction(json);
 			case SAY_TEXT:
-				return new SayTextAction(json, control);
+				return new SayTextAction(json);
 			case PLAY_SOUND:
-				return new PlaySoundAction(json, control);
+				return new PlaySoundAction(json);
 			case NONE:
 			default:
 				return DO_NOTHING;
 		}
 	}
 
-	public static final Action DO_NOTHING = new Action(ActionType.NONE, null, null) {
+	public static final Action DO_NOTHING = new DoNothingAction();
+
+	/** This is meant to be used only by Gson for deserialization methods */
+	public static class DoNothingAction extends Action {
+
+		private DoNothingAction() {
+			super(ActionType.NONE, null);
+		}
 
 		@Override
-		public void execute() throws IOException, InterruptedException {
+		public void execute(PiControl control) throws IOException, InterruptedException {
 		}
-	};
+	}
 }
