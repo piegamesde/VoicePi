@@ -9,14 +9,17 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.google.gson.JsonObject;
 import de.piegames.picontrol.PiControl;
 
 public abstract class SpeechEngine {
 
 	protected Log		log	= LogFactory.getLog(getClass());
+	protected JsonObject	config;
 	protected PiControl	control;
 
-	public SpeechEngine(PiControl control) {
+	public SpeechEngine(PiControl control, JsonObject config) {
+		this.config = config;
 		this.control = control;
 	}
 

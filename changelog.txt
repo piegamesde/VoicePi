@@ -1,3 +1,5 @@
 VERSION 0.2
 - Added Actions. Use Actions to run commands, play sound or say text
-- 
+- Added settings based on these actions.
+- Made TTS and STT configurable
+- Split running commands from the RunCommandAction

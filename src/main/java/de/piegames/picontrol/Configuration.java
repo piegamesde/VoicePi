@@ -16,7 +16,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.piegames.picontrol.module.Module;
 import de.piegames.picontrol.stt.SpeechRecognizer;
-import de.piegames.picontrol.stt.SphinxRecognizer;
 import de.piegames.picontrol.tts.SpeechEngine;
 
 /**
@@ -76,12 +75,12 @@ public class Configuration {
 		return modulesConfig.get(moduleName).getAsJsonObject();
 	}
 
-	public JsonObject getSTTConfig(String sttName) {
-		return sttConfig.getAsJsonObject(sttName).getAsJsonObject();
+	public JsonObject getSTTConfig() {
+		return sttConfig.getAsJsonObject();
 	}
 
-	public JsonObject getTTSConfig(String ttsName) {
-		return ttsConfig.getAsJsonObject(ttsName).getAsJsonObject();
+	public JsonObject getTTSConfig() {
+		return ttsConfig.getAsJsonObject();
 	}
 
 	public JsonObject getSettingsConfig() {
@@ -117,14 +116,21 @@ public class Configuration {
 	}
 
 	public SpeechRecognizer loadSTTFromConfig() {
-		return new SphinxRecognizer(config);// TODO generalize
+		try {
+			return (SpeechRecognizer) Class.forName(sttConfig.getAsJsonPrimitive("class-name").getAsString())
+					.getConstructor(JsonObject.class)
+					.newInstance(ttsConfig);
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+			log.warn("Could not instantiate speech recognizer as specified in the config file", e);
+			return null;
+		}
 	}
 
 	public SpeechEngine loadTTSFromConfig(PiControl control) {
 		try {
-			return (SpeechEngine) Class.forName(config.getAsJsonPrimitive("speech-synth").getAsString())
-					.getConstructor(PiControl.class)
-					.newInstance(control);
+			return (SpeechEngine) Class.forName(ttsConfig.getAsJsonPrimitive("class-name").getAsString())
+					.getConstructor(PiControl.class, JsonObject.class)
+					.newInstance(control, ttsConfig);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.warn("Could not instantiate speech synthesizer as specified in the config file", e);
 			return null;

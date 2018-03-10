@@ -183,17 +183,9 @@ public class PiControl {
 			if (tts == null)
 				tts = config.loadTTSFromConfig(this);
 			if (tts == null)
-				tts = new MutedSpeechEngine(this);
+				tts = new MutedSpeechEngine(this, null);
 		}
 	}
-
-	// public void pause() {
-	// stt.pauseRecognition();
-	// }
-	//
-	// public void resume() {
-	// stt.resumeRecognition();
-	// }
 
 	public void exitApplication() {
 		if (exit) // Application already stopped
