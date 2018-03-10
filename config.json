@@ -92,6 +92,5 @@
 			]
 		}
 	},
-	"corpus-history-size": 10,
-	"local-installation": true
+	"corpus-history-size": 10
 }
