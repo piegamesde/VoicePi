@@ -1,11 +1,11 @@
 {
 	"on-start": {
 		"action": "say-text",
-		"text": "Starting PiControl"
+		"text": "Starting VoicePi"
 	},
 	"on-exit": {
 		"action": "say-text",
-		"text": "Stopping PiControl"
+		"text": "Stopping VoicePi"
 	},
 	"on-activation": {
 		"action": "say-text",
@@ -27,10 +27,10 @@
 		
 	],
 	"tts": {
-		"class-name": "de.piegames.picontrol.tts.FreeSpeechEngine"
+		"class-name": "de.piegames.voicepi.tts.FreeSpeechEngine"
 	},
 	"stt": {
-		"class-name": "de.piegames.picontrol.stt.SphinxRecognizer"
+		"class-name": "de.piegames.voicepi.stt.SphinxRecognizer"
 	},
 	"active-modules": [
 		"shell",
@@ -38,7 +38,7 @@
 	],
 	"modules": {
 		"shell": {
-			"class-name": "de.piegames.picontrol.module.ShellModule",
+			"class-name": "de.piegames.voicepi.module.ShellModule",
 			"commands": {
 				"TEST": {
 					"command": "echo Hello world",
@@ -47,7 +47,7 @@
 			}
 		},
 		"application-control": {
-			"class-name": "de.piegames.picontrol.module.ApplicationModule",
+			"class-name": "de.piegames.voicepi.module.ApplicationModule",
 			"exit-commands": [
 				"EXIT"
 			],

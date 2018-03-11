@@ -1,4 +1,4 @@
-# PiControl
+# VoicePi
 An application made to control the Raspberry Pi with voice commands. Whilst targeting the Pi, the cross-platform nature of Java should make it run on about every system.
 
 ## Features
@@ -23,7 +23,7 @@ See the wiki TODO link
 - Jasper
 - Blather
 
-Both alternatives are written in Python. Jasper has support for a lot more different TTS and STT engines and modules like PiControl, but no context-based communication. Blather is a lot simpler and more restricted, but is easier to set up than Jasper and probably is more than enough.
+Both alternatives are written in Python. Jasper has support for a lot more different TTS and STT engines and modules like VoicePi, but no context-based communication. Blather is a lot simpler and more restricted, but is easier to set up than Jasper and probably is more than enough.
 
 ## Contributing
 
@@ -36,6 +36,6 @@ Clone this repository and import it into Eclipse. Grab one issue you absolutely 
 If you find a piece of undocumented code that isn't obvious to you, please add a comment telling what it does once you figured out.
 
 ## Features to come
-It would be nice to be able to use the STT and TTS APIs from Google, Amazon & Co. There are probably a number of users that don't really care about offline services and who would profit a lot from the increased quality. In the end, PiControl should support pretty much all the engines Jasper already does.
+It would be nice to be able to use the STT and TTS APIs from Google, Amazon & Co. There are probably a number of users that don't really care about offline services and who would profit a lot from the increased quality. In the end, VoicePi should support pretty much all the engines Jasper already does.
 
 We also need an STT module that uses a different STT module depending on the current state. That way, the activation command can still be done locally.

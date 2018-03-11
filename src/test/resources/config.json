@@ -9,16 +9,16 @@
 		"shell",
 		"application-control"
 	],
-	"speech-synth": "de.piegames.picontrol.tts.FreeSpeechEngine",
+	"speech-synth": "de.piegames.voicepi.tts.FreeSpeechEngine",
 	"modules": {
 		"shell": {
-			"class-name": "de.piegames.picontrol.module.ShellModule"
+			"class-name": "de.piegames.voicepi.module.ShellModule"
 		},
 		"pi-control": {
-			"class-name": "de.piegames.picontrol.module.ShellModule"
+			"class-name": "de.piegames.voicepi.module.ShellModule"
 		},
 		"application-control": {
-			"class-name": "de.piegames.picontrol.module.ApplicationModule"
+			"class-name": "de.piegames.voicepi.module.ApplicationModule"
 		}
 	},
 	"corpus-history-size": 10,

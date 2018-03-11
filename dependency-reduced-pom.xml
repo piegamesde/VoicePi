@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.piegames</groupId>
-  <artifactId>picontrol</artifactId>
-  <name>PiControl</name>
+  <artifactId>voicepi</artifactId>
+  <name>VoicePi</name>
   <version>0.1.0</version>
   <description>A cross-platform voice control application primarily targetting Raspberry Pi</description>
-  <url>https://github.com/piegamesde/PiControl/</url>
+  <url>https://github.com/piegamesde/VoicePi/</url>
   <issueManagement>
-    <url>https://github.com/piegamesde/PiControl/issues</url>
+    <url>https://github.com/piegamesde/VoicePi/issues</url>
   </issueManagement>
   <build>
     <plugins>
@@ -32,7 +32,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>de.piegames.picontrol.PiControl</mainClass>
+                  <mainClass>de.piegames.voicepi.VoicePi</mainClass>
                 </transformer>
               </transformers>
             </configuration>
