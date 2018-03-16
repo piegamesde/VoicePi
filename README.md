@@ -1,5 +1,5 @@
-# VoicePi
-An application made to control the Raspberry Pi with voice commands. Whilst targeting the Pi, the cross-platform nature of Java should make it run on about every system.
+# VoicePi - Voice control for your Raspberry Pi (And any other device)
+An application made to control the Raspberry Pi with voice commands. Whilst targeting the Pi, the cross-platform nature of Java should make it run on about every system. Its primary goals are the ability to run out of the box without any problems and the ease of configuring the wanted functionality.
 
 ## Features
 - Built-in and set-up voice recognition (STT) and speech synthesizer (TTS)

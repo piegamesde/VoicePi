@@ -20,10 +20,12 @@ public class DeafRecognizer extends SpeechRecognizer {
 
 	@Override
 	public void run() {
-		try {
-			new Object().wait();
-		} catch (InterruptedException e) {
-			return;
-		}
+		// try {
+		throw new InternalError("FIXME: This has to be implemented");
+		// This does not work and is buggy
+		// new Object().wait();
+		// } catch (InterruptedException e) {
+		// return;
+		// }
 	}
 }

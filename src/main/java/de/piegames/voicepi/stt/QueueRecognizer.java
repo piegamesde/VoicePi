@@ -16,6 +16,10 @@ public class QueueRecognizer extends SpeechRecognizer {
 		super(config);
 	}
 
+	public QueueRecognizer() {
+		this(null);
+	}
+
 	public void commandSpoken(String command) {
 		spoken.add(Arrays.asList(command));
 	}

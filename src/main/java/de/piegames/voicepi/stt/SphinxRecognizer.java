@@ -29,9 +29,11 @@ import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.LiveSpeechRecognizer;
 import edu.cmu.sphinx.api.SpeechResult;
 
+@SuppressWarnings("deprecation")
 public class SphinxRecognizer extends SpeechRecognizer {
 
-	protected LiveSpeechRecognizer stt;
+	protected LiveSpeechRecognizer	stt;
+	protected volatile boolean		ignoreCommands	= false;
 
 	public SphinxRecognizer(JsonObject config) {
 		super(config);
@@ -54,6 +56,7 @@ public class SphinxRecognizer extends SpeechRecognizer {
 		} else {
 			Files.write(corpusPath, commands);
 
+			@SuppressWarnings("resource")
 			HttpClient client = new DefaultHttpClient();
 			String downloadURL;
 			{
@@ -115,7 +118,8 @@ public class SphinxRecognizer extends SpeechRecognizer {
 				log.info("You said: " + result.getHypothesis());
 				Collection<String> best = result.getNbest(Integer.MAX_VALUE);
 				// TODO actually sort them by quality
-				commandsSpoken.offer(best);
+				if (!ignoreCommands)
+					commandsSpoken.offer(best);
 			}
 		}
 	}
@@ -129,25 +133,31 @@ public class SphinxRecognizer extends SpeechRecognizer {
 
 	@Override
 	public void stopRecognition() {
-		stt.stopRecognition();
 		thread.interrupt();
 		Thread.yield();
 		// Sorry, no other possibility here. Sphinx does not provide anything to stop it while recognizing.
 		thread.stop();
+		Thread.yield();
+		try {
+			stt.stopRecognition();
+		} catch (IllegalStateException e) {
+			log.error("Could not stop voice recognition", e);
+		}
 	}
 
 	@Override
 	public void pauseRecognition() {
-		// startRecognition();
-		stt.stopRecognition();
+		// stt.stopRecognition();
 		// TODO starting and stopping takes quite a lot of time. Instead, don't stop it and just discard the results. (This needs to be tested because it might
 		// not work)
+		ignoreCommands = true;
 	}
 
 	@Override
 	public void resumeRecognition() {
 		// stopRecognition();
-		stt.startRecognition(true);
+		// stt.startRecognition(true);
+		ignoreCommands = false;
 	}
 
 	@Override

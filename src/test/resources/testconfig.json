@@ -1,0 +1,83 @@
+{
+	"on-start": {
+		"action": "say-text",
+		"text": "Starting VoicePi"
+	},
+	"on-exit": {
+		"action": "say-text",
+		"text": "Stopping VoicePi"
+	},
+	"on-activation": {
+		"action": "say-text",
+		"text": "Yes, sir"
+	},
+	"on-timeout": {
+		"action": "say-text",
+		"text": "Too late"
+	},
+	"on-reload": {
+		"action": "say-text",
+		"text": "Reloading"
+	},
+	"timeout": 5,
+	"on-wrong-command": {
+		"action": "say-text",
+		"text": "BOOOO"
+	},
+	"activation-commands": [
+		"ACTIVATE"
+	],
+	"tts": {
+		"class-name": "de.piegames.voicepi.tts.QueueEngine"
+	},
+	"stt": {
+		"class-name": "de.piegames.voicepi.stt.QueueRecognizer",
+		"corpus-history-size": 10
+	},
+	"active-modules": [
+		"shell",
+		"application-control",
+		"advanced"
+	],
+	"modules": {
+		"shell": {
+			"class-name": "de.piegames.voicepi.module.ActionModule",
+			"commands": {
+				"TEST": {
+					"action": "run-command",
+					"command": "echo Hello world",
+					"stdout-to-tts": "true"
+				}
+			}
+		},
+		"application-control": {
+			"class-name": "de.piegames.voicepi.module.ApplicationModule",
+			"exit-commands": [
+				"EXIT"
+			],
+			"reload-commands": [
+				"RELOAD"
+			]
+		},
+		"advanced": {
+			"class-name": "de.piegames.voicepi.module.ActionModule",
+			"commands": {
+				"ADVANCE": {
+					"action": "say-text",
+					"text": "Going to the next level",
+					"next-state": "advanced"
+				}
+			},
+			"commands-advanced": {
+				"TEST": {
+					"action": "say-text",
+					"text": "Advanced shit, bro!"
+				},
+				"TEST2": {
+					"action": "say-text",
+					"text": "Feel the progress?"
+				}
+			}
+		}
+	}
+}

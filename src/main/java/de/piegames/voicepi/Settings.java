@@ -3,19 +3,27 @@ package de.piegames.voicepi;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import com.google.gson.annotations.SerializedName;
 import de.piegames.voicepi.action.Action;
 
 /** This class stores all the settings relevant to the core of the application. */
 public class Settings {
 
+	@SerializedName("on-start")
 	protected Action		onStart				= Action.DO_NOTHING;
+	@SerializedName("on-exit")
 	protected Action		onExit				= Action.DO_NOTHING;
+	@SerializedName("on-activation")
 	protected Action		onActivation		= Action.DO_NOTHING;
+	@SerializedName("on-timeout")
 	protected Action		onTimeout			= Action.DO_NOTHING;
+	@SerializedName("on-reload")
 	protected Action		onReload			= Action.DO_NOTHING;
+	@SerializedName("on-wrong-command")
 	protected Action		onWrongCommand		= Action.DO_NOTHING;
 
 	protected int			timeout				= 0;
+	@SerializedName("activation-commands")
 	protected Set<String>	activationCommands	= new HashSet<>();
 
 	public Settings() {
@@ -96,5 +104,11 @@ public class Settings {
 
 	public void setActivationCommands(Set<String> activationCommands) {
 		this.activationCommands = Objects.requireNonNull(activationCommands);
+	}
+
+	@Override
+	public String toString() {
+		return "Settings [onStart=" + onStart + ", onExit=" + onExit + ", onActivation=" + onActivation + ", onTimeout=" + onTimeout + ", onReload=" + onReload + ", onWrongCommand=" + onWrongCommand + ", timeout=" + timeout
+				+ ", activationCommands=" + activationCommands + "]";
 	}
 }

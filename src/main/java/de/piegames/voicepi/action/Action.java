@@ -1,6 +1,8 @@
 package de.piegames.voicepi.action;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonObject;
@@ -11,11 +13,21 @@ public abstract class Action {
 	protected final Log log = LogFactory.getLog(getClass());
 
 	public static enum ActionType {
-		RUN_COMMAND, SAY_TEXT, PLAY_SOUND, NONE;
+		RUN_COMMAND(RunCommandAction.class), SAY_TEXT(SayTextAction.class), PLAY_SOUND(PlaySoundAction.class), NONE(DoNothingAction.class);
+
+		private Class<? extends Action> clazz;
+
+		private ActionType(Class<? extends Action> clazz) {
+			this.clazz = Objects.requireNonNull(clazz);
+		}
 
 		public static ActionType forName(String jsonName) {
 			String name = jsonName.toUpperCase().replace('-', '_');
 			return valueOf(name);
+		}
+
+		public Class<? extends Action> getActionClass() {
+			return clazz;
 		}
 	}
 
@@ -30,24 +42,16 @@ public abstract class Action {
 	public final void execute(VoicePi control, Log log, String name) {
 		try {
 			execute(control);
-		} catch (IOException | InterruptedException e) {
+		} catch (IOException | InterruptedException | NullPointerException e) {
 			log.warn("Could not execute Action " + name, e);
 		}
 	}
 
-	@Deprecated
-	public static Action fromJson(JsonObject json) {
-		switch (ActionType.forName(json.getAsJsonPrimitive("action").getAsString())) {
-			case RUN_COMMAND:
-				return new RunCommandAction(json);
-			case SAY_TEXT:
-				return new SayTextAction(json);
-			case PLAY_SOUND:
-				return new PlaySoundAction(json);
-			case NONE:
-			default:
-				return DO_NOTHING;
-		}
+	public static Action fromJson(JsonObject data) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+		return ActionType.forName(data.getAsJsonPrimitive("action").getAsString())
+				.getActionClass()
+				.getConstructor(JsonObject.class)
+				.newInstance(data);
 	}
 
 	public static final Action DO_NOTHING = new DoNothingAction();
@@ -57,6 +61,12 @@ public abstract class Action {
 
 		private DoNothingAction() {
 			super(ActionType.NONE, null);
+		}
+
+		/** @deprecated See {@link Action#DO_NOTHING} instead. */
+		@Deprecated
+		public DoNothingAction(JsonObject config) {
+			super(ActionType.NONE, config);
 		}
 
 		@Override

@@ -24,13 +24,14 @@
 		"soundfile": "sounds/error.wav"
 	},
 	"activation-commands": [
-		
+		"RASPBERRY"
 	],
 	"tts": {
 		"class-name": "de.piegames.voicepi.tts.FreeSpeechEngine"
 	},
 	"stt": {
-		"class-name": "de.piegames.voicepi.stt.SphinxRecognizer"
+		"class-name": "de.piegames.voicepi.stt.SphinxRecognizer",
+		"corpus-history-size": 10
 	},
 	"active-modules": [
 		"shell",
@@ -38,9 +39,10 @@
 	],
 	"modules": {
 		"shell": {
-			"class-name": "de.piegames.voicepi.module.ShellModule",
+			"class-name": "de.piegames.voicepi.module.ActionModule",
 			"commands": {
 				"TEST": {
+					"action": "run-command",
 					"command": "echo Hello world",
 					"stdout-to-tts": "true"
 				}
@@ -55,6 +57,5 @@
 				"RELOAD"
 			]
 		}
-	},
-	"corpus-history-size": 10
+	}
 }

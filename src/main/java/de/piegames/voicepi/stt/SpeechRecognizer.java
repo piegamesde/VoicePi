@@ -13,6 +13,7 @@ public abstract class SpeechRecognizer implements Runnable {
 
 	protected final Log								log	= LogFactory.getLog(getClass());
 	protected JsonObject							config;
+	// TODO make read-only
 	public final BlockingQueue<Collection<String>>	commandsSpoken;
 	protected Thread								thread;
 
@@ -50,12 +51,12 @@ public abstract class SpeechRecognizer implements Runnable {
 	 * possible.
 	 */
 	public void pauseRecognition() {
-		startRecognition();
+		stopRecognition();
 	}
 
 	/** This will resume a paused recognition, returning it back to normal state. */
 	public void resumeRecognition() {
-		stopRecognition();
+		startRecognition();
 	}
 
 	/** Unloads and releases all resources. The object won't be used after this method being called. */

@@ -46,7 +46,7 @@ public class VoiceStateTest {
 		assertEquals(Collections.emptySet(), uut.getAvailableCommands(new ContextState<>("module2", "end")));
 		assertNull(uut.commandSpoken("NOT REGISTERED COMMAND"));
 		assertEquals(root, uut.getCurrentState());
-		assertEquals("module1", uut.commandSpoken("TEST"));
+		assertEquals("module1", uut.commandSpoken("TEST").owner);
 		assertEquals(root, uut.getCurrentState());
 
 		MutableValueGraph<ContextState<String>, Set<String>> graph = createModule2(root);
@@ -57,10 +57,10 @@ public class VoiceStateTest {
 		assertEquals(new HashSet<>(Arrays.asList("TEST", "HI", "HELLO")), uut.getAvailableCommands());
 		assertEquals(new HashSet<>(Arrays.asList("BYE", "SEE YOU LATER")), uut.getAvailableCommands(between));
 		assertNull(uut.commandSpoken("SEE YOU LATER"));
-		assertEquals("module2", uut.commandSpoken("HI"));
+		assertEquals("module2", uut.commandSpoken("HI").owner);
 		assertEquals(between, uut.getCurrentState());
 		assertNull(uut.commandSpoken("TEST"));
-		assertEquals("module2", uut.commandSpoken("BYE"));
+		assertEquals("module2", uut.commandSpoken("BYE").owner);
 		assertEquals(root, uut.getCurrentState());
 	}
 
@@ -81,10 +81,10 @@ public class VoiceStateTest {
 		assertNull(uut.commandSpoken("TEST"));
 		assertEquals(start, uut.getCurrentState());
 		assertEquals(new HashSet<>(Arrays.asList("kevin", "horst", "idiot")), uut.getAvailableCommands());
-		assertNull(uut.commandSpoken("kevin"));
+		assertNull(uut.commandSpoken("kevin").owner);
 		assertEquals(root, uut.getCurrentState());
 		assertEquals(new HashSet<>(Arrays.asList("TEST", "HI", "HELLO")), uut.getAvailableCommands());
-		assertEquals("module2", uut.commandSpoken("HELLO"));
+		assertEquals("module2", uut.commandSpoken("HELLO").owner);
 		assertEquals(new ContextState<>("module2", "between"), uut.getCurrentState());
 		uut.commandSpoken("idiot");
 		assertEquals(new ContextState<>("module2", "between"), uut.getCurrentState());

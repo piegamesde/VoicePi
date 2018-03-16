@@ -54,20 +54,21 @@ public class Configuration {
 
 	public void loadDefaultConfig() {
 		log.info("Loading default configuration");
-		config = new JsonParser().parse(new InputStreamReader(getClass().getResourceAsStream("config.json"))).getAsJsonObject();
+		// TODO fix path
+		config = new JsonParser().parse(new InputStreamReader(getClass().getResourceAsStream("../../../defaultconfig.json"))).getAsJsonObject();
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
-		ttsConfig = config.getAsJsonObject("stt");
+		ttsConfig = config.getAsJsonObject("tts");
 		settingsConfig = config;
 	}
 
 	public void loadConfig() throws IOException {
 		// Load config
 		log.info("Loading configuration from file " + path.toAbsolutePath());
-		config = new JsonParser().parse(Files.newBufferedReader(Paths.get("config.json").toAbsolutePath())).getAsJsonObject();
+		config = new JsonParser().parse(Files.newBufferedReader(path.toAbsolutePath())).getAsJsonObject();
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
-		ttsConfig = config.getAsJsonObject("stt");
+		ttsConfig = config.getAsJsonObject("tts");
 		settingsConfig = config;
 	}
 
@@ -119,7 +120,7 @@ public class Configuration {
 		try {
 			return (SpeechRecognizer) Class.forName(sttConfig.getAsJsonPrimitive("class-name").getAsString())
 					.getConstructor(JsonObject.class)
-					.newInstance(ttsConfig);
+					.newInstance(sttConfig);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.warn("Could not instantiate speech recognizer as specified in the config file", e);
 			return null;

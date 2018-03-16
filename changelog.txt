@@ -4,3 +4,4 @@ VERSION 0.2
 - Made TTS and STT configurable
 - Split running commands from the RunCommandAction
 - ActionModule has now context too which makes it a lot more powerful
+- Two more tests. Fixed a _lot_ more bugs.

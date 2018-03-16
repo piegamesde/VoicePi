@@ -1,6 +1,7 @@
 package de.piegames.voicepi;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.NoSuchFileException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,11 +16,11 @@ import org.apache.commons.logging.LogFactory;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import de.piegames.voicepi.action.Action;
 import de.piegames.voicepi.action.Action.ActionType;
-import de.piegames.voicepi.action.PlaySoundAction;
-import de.piegames.voicepi.action.RunCommandAction;
-import de.piegames.voicepi.action.SayTextAction;
 import de.piegames.voicepi.module.Module;
 import de.piegames.voicepi.state.ContextState;
 import de.piegames.voicepi.state.VoiceState;
@@ -30,7 +31,7 @@ import de.piegames.voicepi.tts.SpeechEngine;
 import io.gsonfire.GsonFireBuilder;
 import io.gsonfire.TypeSelector;
 
-public class VoicePi {
+public class VoicePi implements Runnable {
 
 	protected static final Log		log			= LogFactory.getLog(VoicePi.class);
 
@@ -46,17 +47,23 @@ public class VoicePi {
 
 	public VoicePi(Configuration config) {
 		this.config = Objects.requireNonNull(config);
-		reload();
 	}
 
+	@Override
 	public void run() {
+		// TODO add "listening-state" of the whole application so that the tests can appropriately wait for actions to finish
+		// TODO make only run once
 		settings.onStart.execute(this, log, "onStart");
+		log.debug("Current state: " + stateMachine.getCurrentState());
+		log.debug("Available commands: " + stateMachine.getAvailableCommands());
 		while (!exit) {
 			try {
 				Collection<String> spoken = stt.commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
-				if (spoken != null)
+				if (spoken != null) {
 					onCommandSpoken(spoken);
-				else {
+					log.debug("Current state: " + stateMachine.getCurrentState());
+					log.debug("Available commands: " + stateMachine.getAvailableCommands());
+				} else if (!stateMachine.isWaitingForActivation() && stateMachine.isActivationNeeded()) {
 					log.info("Timed out");
 					settings.onTimeout.execute(this, log, "onTimeout");
 					stateMachine.resetState();
@@ -69,11 +76,10 @@ public class VoicePi {
 			}
 			if (Thread.interrupted()) {
 				log.info("An interrupt message was received, stopping the application");
-				exitApplication();
 				break;
 			}
 		}
-		settings.onExit.execute(this, log, "onExit");
+		exitApplication();
 	}
 
 	public void onCommandSpoken(String command) {
@@ -81,9 +87,9 @@ public class VoicePi {
 	}
 
 	public void onCommandSpoken(Collection<String> possibleCommand) {
-		possibleCommand.stream().forEach(System.out::println);
+		log.debug("You might have said: " + Arrays.toString(possibleCommand.toArray()));
 		Module responsible = null;
-		ContextState<Module> state = null;
+		ContextState<Module> state = null, initialState = stateMachine.getCurrentState();
 		String command = null;
 		for (String s : possibleCommand) {
 			if (s.startsWith("<s>"))
@@ -92,26 +98,26 @@ public class VoicePi {
 				s = s.substring(0, s.length() - 4);
 			s = s.trim();
 
-			if (stateMachine.commandSpoken(s) != null) {
-				state = stateMachine.getCurrentState();
+			ContextState<Module> module = stateMachine.commandSpoken(s);
+			if (module != null) {
+				state = module;
 				responsible = state.owner;
 				command = s;
 				break;
 			}
 		}
-		if (state == stateMachine.getRoot()) {
+		if (state == stateMachine.getRoot() && stateMachine.isActivationNeeded()) {
 			log.info("Activated.");
 			settings.onActivation.execute(this, log, "onActivation");
 			return;
 		}
 		if (responsible != null) {
 			stt.pauseRecognition();
-			responsible.onCommandSpoken(stateMachine.getCurrentState(), command);
+			// initialState: The state before this command was spoken and thus the state this command belongs to
+			responsible.onCommandSpoken(initialState, command);
 			stt.resumeRecognition();
 		} else {
 			log.info("What you just said makes no sense, sorry");
-			log.debug("Current state: " + stateMachine.getCurrentState());
-			log.debug("Available commands: " + stateMachine.getAvailableCommands());
 			settings.onWrongCommand.execute(this, log, "onWrongCommand");
 		}
 	}
@@ -123,10 +129,30 @@ public class VoicePi {
 		if (stt != null) {
 			stt.stopRecognition();
 			stt.unload();
+			stt = null;
 		}
+		tts = null;
 		log.info("Reloading all modules");
 		modules.values().forEach(Module::close);
 		modules.clear();
+
+		// Load config
+		try {
+			config.loadConfig();
+		} catch (NoSuchFileException e) {
+			log.error("Could not find config file at default path; loading default");
+			config.loadDefaultConfig();
+			try {
+				config.saveConfig();
+			} catch (IOException e1) {
+			}
+		} catch (JsonParseException e) {
+			log.error("Your config file is corrupt, please fix it or delete it", e);
+			return;
+		} catch (IOException e) {
+			log.error("Could not load config file; loading default", e);
+			config.loadDefaultConfig();
+		}
 
 		{ // Load Settings
 			// TODO use Optional
@@ -135,11 +161,13 @@ public class VoicePi {
 				settings = config.loadSettingsFromConfig();
 			if (settings == null)
 				settings = new Settings();
+			log.debug("Loaded settings: " + settings);
 		}
 
 		// Initialize state machine
 		stateMachine = new VoiceState<>();
 		stateMachine.setActivationCommands(settings.activationCommands);
+
 		// stateMachine.setActivationCommands(
 		// StreamSupport.stream(config.getConfig().getAsJsonArray("activation-commands").spliterator(), false)
 		// .map(m -> m.getAsString())
@@ -182,8 +210,10 @@ public class VoicePi {
 			tts = config.getTTS();
 			if (tts == null)
 				tts = config.loadTTSFromConfig(this);
-			if (tts == null)
+			if (tts == null) {
 				tts = new MutedSpeechEngine(this, null);
+				log.error("Could not load the speech synthesis module; switching to MutedRecognizer");
+			}
 		}
 	}
 
@@ -191,12 +221,13 @@ public class VoicePi {
 		if (exit) // Application already stopped
 			return;
 		exit = true;
+
 		log.info("Stopping speech recognition");
 		stt.stopRecognition();
 		stt.unload();
 		modules.values().forEach(Module::close);
 		log.info("Quitting application");
-		System.exit(0);
+		settings.onExit.execute(this, log, "onExit");
 	}
 
 	public SpeechEngine getTTS() {
@@ -214,23 +245,8 @@ public class VoicePi {
 	public static void main(String... args) {
 		// TODO add CLI
 		Configuration config = new Configuration();
-		try {
-			config.loadConfig();
-		} catch (NoSuchFileException e) {
-			log.error("Could not find config file at default path; loading default");
-			config.loadDefaultConfig();
-			try {
-				config.saveConfig();
-			} catch (IOException e1) {
-			}
-		} catch (JsonParseException e) {
-			log.error("Your config file is corrupt, please fix it or delete it", e);
-			return;
-		} catch (IOException e) {
-			log.error("Could not load config file; loading default", e);
-			config.loadDefaultConfig();
-		}
 		VoicePi control = new VoicePi(config);
+		control.reload();
 		control.run();
 	}
 
@@ -239,20 +255,26 @@ public class VoicePi {
 
 				@Override
 				public Class<? extends Action> getClassForElement(JsonElement readElement) {
-					switch (ActionType.forName(readElement.getAsJsonObject().getAsJsonPrimitive("action").getAsString())) {
-						case RUN_COMMAND:
-							return RunCommandAction.class;
-						case SAY_TEXT:
-							return SayTextAction.class;
-						case PLAY_SOUND:
-							return PlaySoundAction.class;
-						case NONE:
-						default:
-							return Action.DoNothingAction.class;
-					}
+					return ActionType.forName(readElement.getAsJsonObject().getAsJsonPrimitive("action").getAsString()).getActionClass();
 				}
 			})
 			.createGsonBuilder()
+			.registerTypeHierarchyAdapter(Action.class, new TypeAdapter<Action>() {
+
+				@Override
+				public void write(JsonWriter out, Action value) throws IOException {
+					throw new IOException("Not implemented, not needed");
+				}
+
+				@Override
+				public Action read(JsonReader in) throws IOException {
+					try {
+						return Action.fromJson(com.google.gson.internal.Streams.parse(in).getAsJsonObject());
+					} catch (NullPointerException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException | JsonParseException e) {
+						throw new JsonParseException("Could not instantiate Action", e);
+					}
+				}
+			})
 			.setPrettyPrinting()
 			.setLenient()
 			.create();

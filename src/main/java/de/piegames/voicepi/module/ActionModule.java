@@ -19,37 +19,41 @@ public class ActionModule extends Module {
 	// protected Map<Edge<String, String>, Map<String, Action>> commands = new HashMap<>();
 	protected MutableValueGraph<String, Map<String, Action>> commands = ValueGraphBuilder.directed().build();
 
-	@SuppressWarnings("deprecation")
 	public ActionModule(VoicePi control, String name, JsonObject config) throws RuntimeException {
 		super(control, name, config);
-		config.getAsJsonObject("commands").entrySet()
-				.stream()
-				.forEach(e -> {
-					JsonObject value = e.getValue().getAsJsonObject();
-					String end = "end";
-					if (value.has("next-state"))
-						end = value.getAsJsonPrimitive("next-state").getAsString();
-					putCommand("root", end, e.getKey(), Action.fromJson(value));
-				});
+		putCommands(config.getAsJsonObject("commands"), "root");
 		config.entrySet()
 				.stream()
 				.filter(e -> e.getKey().startsWith("commands-"))
+				.forEach(e -> putCommands(e.getValue().getAsJsonObject(), e.getKey().substring("commands-".length())));
+	}
+
+	protected void putCommands(JsonObject state, String stateName) {
+		state.entrySet()
+				.stream()
 				.forEach(e -> {
 					JsonObject value = e.getValue().getAsJsonObject();
 					String end = "end";
 					if (value.has("next-state"))
 						end = value.getAsJsonPrimitive("next-state").getAsString();
-					putCommand(e.getKey().substring("commands-".length()), end, e.getKey(), Action.fromJson(value));
+					putCommand(stateName, end, e.getKey(), value);
 				});
 	}
 
-	protected void putCommand(String start, String end, String command, Action value) {
-		if (!commands.hasEdgeConnecting("root", end))
-			commands.edgeValue("root", end).orElseGet(() -> {
-				HashMap<String, Action> ret = new HashMap<>();
-				commands.putEdgeValue(start, end, ret);
-				return ret;
-			}).put(command, value);
+	protected void putCommand(String start, String end, String command, JsonObject value) {
+		// Action action = VoicePi.GSON.fromJson(value, Action.class);
+		Action action = null;
+		try {
+			action = VoicePi.GSON.fromJson(value, Action.class);
+		} catch (RuntimeException e) {
+			log.warn("Cannot create action for command '" + command + "', ignoring", e);
+			return;
+		}
+		commands.edgeValue(start, end).orElseGet(() -> {
+			HashMap<String, Action> ret = new HashMap<>();
+			commands.putEdgeValue(start, end, ret);
+			return ret;
+		}).put(command, action);
 	}
 
 	@Override
@@ -72,6 +76,7 @@ public class ActionModule extends Module {
 	@Override
 	public void onCommandSpoken(ContextState<Module> currentState, String command) {
 		try {
+			System.out.println(currentState);
 			for (String nextState : commands.successors(currentState.name)) {
 				Optional<Action> action = Optional.fromNullable(commands.edgeValue(currentState.name, nextState).get().get(command));
 				if (action.isPresent()) {

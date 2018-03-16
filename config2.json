@@ -16,7 +16,8 @@
 		"soundfile": "sounds/timeout.wav"
 	},
 	"on-reload": {
-		"action": "none"
+		"action": "say-text",
+		"text": "Reloading"
 	},
 	"timeout": 30,
 	"on-wrong-command": {
@@ -24,22 +25,26 @@
 		"soundfile": "sounds/error.wav"
 	},
 	"activation-commands": [
-		"KEVIN"
+		"RASPBERRY"
 	],
 	"tts": {
-		"class-name": "de.piegames.voicepi.tts.FreeSpeechEngine"
+		"_class-name": "de.piegames.voicepi.tts.FreeSpeechEngine",
+		"class-name": "de.piegames.voicepi.tts.CommandSpeechEngine",
+		"command": "espeak --stdin --stdout"
 	},
 	"stt": {
-		"class-name": "de.piegames.voicepi.stt.SphinxRecognizer"
+		"class-name": "de.piegames.voicepi.stt.SphinxRecognizer",
+		"corpus-history-size": 10
 	},
 	"active-modules": [
 		"pi-control",
 		"shell",
-		"application-control"
+		"application-control",
+		"mocp"
 	],
 	"modules": {
 		"shell": {
-			"class-name": "de.piegames.voicepi.module.ShellModule",
+			"class-name": "de.piegames.voicepi.module.ActionModule",
 			"commands": {
 				"TEST": {
 					"action": "run-command",
@@ -49,7 +54,7 @@
 			}
 		},
 		"pi-control": {
-			"class-name": "de.piegames.voicepi.module.ShellModule",
+			"class-name": "de.piegames.voicepi.module.ActionModule",
 			"commands": {
 				"CHECK INTERNET": {
 					"action": "run-command",
@@ -82,6 +87,59 @@
 				}
 			}
 		},
+		"mocp": {
+			"class-name": "de.piegames.voicepi.module.ActionModule",
+			"commands": {
+				"PLAY MUSIC": {
+					"action": "run-command",
+					"command": [
+						"/bin/bash",
+						"-c",
+						"mocp -S;mocp -p"
+					]
+				},
+				"STOP MUSIC": {
+					"action": "run-command",
+					"command": "mocp -x",
+					"stdout-to-tts": "true"
+				},
+				"PAUSE MUSIC": {
+					"action": "run-command",
+					"command": "mocp -P",
+					"stdout-to-tts": "true"
+				},
+				"SONG INFO": {
+					"action": "run-command",
+					"command": "mocp -Q \"%title from %album by %artist\"",
+					"stdout-to-tts": "true"
+				},
+				"PLAYLIST": {
+					"action": "say-text",
+					"text": "Select playlist",
+					"next-state": "playlist"
+				}
+			},
+			"commands-playlist": {
+				"FAVOURITES": {
+					"action": "run-command",
+					"say-before-executing": "Adding to favourite",
+					"command": [
+						"/bin/bash",
+						"-c",
+						"mocp -Q %title >> favourites.txt"
+					]
+				},
+				"DELETE": {
+					"action": "run-command",
+					"say-before-executing": "Delete this song",
+					"command": [
+						"/bin/bash",
+						"-c",
+						"mocp -Q %title >> delete.txt"
+					]
+				}
+			}
+		},
 		"application-control": {
 			"class-name": "de.piegames.voicepi.module.ApplicationModule",
 			"exit-commands": [
@@ -91,6 +149,5 @@
 				"RELOAD"
 			]
 		}
-	},
-	"corpus-history-size": 10
+	}
 }

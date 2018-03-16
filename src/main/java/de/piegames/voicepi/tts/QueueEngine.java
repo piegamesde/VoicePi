@@ -14,6 +14,10 @@ public class QueueEngine extends SpeechEngine {
 		super(control, config);
 	}
 
+	public QueueEngine(VoicePi control) {
+		this(control, null);
+	}
+
 	@Override
 	public AudioInputStream generateAudio(String text) {
 		spoken.add(text);

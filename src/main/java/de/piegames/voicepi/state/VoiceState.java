@@ -83,7 +83,7 @@ public class VoiceState<T> {
 			if (states.edgeValue(current, node).get().contains(command)) {
 				current = node;
 				if (states.outDegree(current) == 0)
-					current = start; // TODO not set new state yet
+					current = start;
 				return node;
 			}
 		return null;

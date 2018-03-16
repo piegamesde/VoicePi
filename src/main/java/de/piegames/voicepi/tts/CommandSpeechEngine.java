@@ -1,6 +1,7 @@
 package de.piegames.voicepi.tts;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -24,6 +25,9 @@ public class CommandSpeechEngine extends SpeechEngine {
 	public AudioInputStream generateAudio(String text) {
 		try {
 			Process process = command.execute();
+			OutputStream out = process.getOutputStream();
+			out.write(text.getBytes());
+			out.close();
 			if (noAudio) {
 				process.waitFor();
 				return null;

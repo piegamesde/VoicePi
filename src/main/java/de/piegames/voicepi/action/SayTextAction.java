@@ -1,6 +1,7 @@
 package de.piegames.voicepi.action;
 
 import java.io.IOException;
+import java.util.Objects;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 
@@ -10,7 +11,7 @@ public class SayTextAction extends Action {
 
 	public SayTextAction(JsonObject data) {
 		super(ActionType.SAY_TEXT, data);
-		text = data.getAsJsonPrimitive("text").getAsString();
+		text = Objects.requireNonNull(data.getAsJsonPrimitive("text").getAsString());
 	}
 
 	@Override
