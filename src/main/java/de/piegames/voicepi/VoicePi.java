@@ -113,6 +113,7 @@ public class VoicePi implements Runnable {
 		}
 		if (responsible != null) {
 			stt.pauseRecognition();
+			settings.onCommandSpoken.execute(this, log, "onCommandSpoken");
 			// initialState: The state before this command was spoken and thus the state this command belongs to
 			responsible.onCommandSpoken(initialState, command);
 			stt.resumeRecognition();

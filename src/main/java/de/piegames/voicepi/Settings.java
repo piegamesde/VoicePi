@@ -21,6 +21,8 @@ public class Settings {
 	protected Action		onReload			= Action.DO_NOTHING;
 	@SerializedName("on-wrong-command")
 	protected Action		onWrongCommand		= Action.DO_NOTHING;
+	@SerializedName("on-command-spoken")
+	protected Action		onCommandSpoken		= Action.DO_NOTHING;
 
 	protected int			timeout				= 0;
 	@SerializedName("activation-commands")
@@ -29,7 +31,7 @@ public class Settings {
 	public Settings() {
 	}
 
-	public Settings(Action onStart, Action onExit, Action onActivation, Action onTimeout, Action onReload, Action onWrongCommand, int timeout, Set<String> activationCommands) {
+	public Settings(Action onStart, Action onExit, Action onActivation, Action onTimeout, Action onReload, Action onWrongCommand, Action onCommandSpoken, int timeout, Set<String> activationCommands) {
 		setOnStart(onStart);
 		setOnExit(onExit);
 		setOnActivation(onActivation);
@@ -38,6 +40,7 @@ public class Settings {
 		setOnWrongCommand(onWrongCommand);
 		setTimeout(timeout);
 		setActivationCommands(activationCommands);
+		setOnCommandSpoken(onCommandSpoken);
 	}
 
 	public Action getOnStart() {
@@ -86,6 +89,14 @@ public class Settings {
 
 	public void setOnWrongCommand(Action onWrongCommand) {
 		this.onWrongCommand = Objects.requireNonNull(onWrongCommand, "Use Action.DO_NOTHING instead of null");
+	}
+
+	public Action getOnCommandSpoken() {
+		return onCommandSpoken;
+	}
+
+	public void setOnCommandSpoken(Action onCommandSpoken) {
+		this.onCommandSpoken = Objects.requireNonNull(onCommandSpoken, "Use Action.DO_NOTHING instead of null");
 	}
 
 	public int getTimeout() {

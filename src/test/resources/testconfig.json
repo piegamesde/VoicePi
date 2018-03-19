@@ -24,6 +24,10 @@
 		"action": "say-text",
 		"text": "BOOOO"
 	},
+	"on-command-spoken": {
+		"action": "say-text",
+		"text": "OK"
+	},
 	"activation-commands": [
 		"ACTIVATE"
 	],

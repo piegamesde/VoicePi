@@ -8,21 +8,25 @@
 		"text": "Stopping VoicePi"
 	},
 	"on-activation": {
-		"action": "say-text",
-		"text": "Yes, sir"
+		"action": "play-sound",
+		"soundfile": "sounds/activated.wav"
+	},
+	"on-command-spoken": {
+		"action": "play-sound",
+		"soundfile": "sounds/ok.wav"
+	},
+	"on-reload": {
+		"action": "none"
+	},
+	"on-wrong-command": {
+		"action": "play-sound",
+		"soundfile": "sounds/error.wav"
 	},
 	"on-timeout": {
 		"action": "play-sound",
 		"soundfile": "sounds/timeout.wav"
 	},
-	"on-reload": {
-		"action": "none"
-	},
 	"timeout": 30,
-	"on-wrong-command": {
-		"action": "play-sound",
-		"soundfile": "sounds/error.wav"
-	},
 	"activation-commands": [
 		"RASPBERRY"
 	],

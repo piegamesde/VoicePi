@@ -34,6 +34,7 @@ public class VoicePiTest {
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("TEST");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Hello world", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
@@ -43,6 +44,7 @@ public class VoicePiTest {
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("RELOAD");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Reloading", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		Thread.sleep(1000);
 		stt = (QueueRecognizer) control.getSTT();
@@ -51,6 +53,7 @@ public class VoicePiTest {
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("EXIT");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Stopping VoicePi", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 
 		t.join(1000);
@@ -74,20 +77,25 @@ public class VoicePiTest {
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("ADVANCE");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Going to the next level", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("TEST");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Advanced shit, bro!", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("ADVANCE");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Going to the next level", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("TEST2");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Feel the progress?", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("ADVANCE");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Going to the next level", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		Thread.sleep(5000);
 		assertEquals("Too late", tts.spoken.poll(timeout, TimeUnit.SECONDS));
@@ -95,6 +103,7 @@ public class VoicePiTest {
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("EXIT");
+		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		assertEquals("Stopping VoicePi", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 
 		t.join(1000);
