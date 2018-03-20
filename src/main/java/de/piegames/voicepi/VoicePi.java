@@ -65,7 +65,9 @@ public class VoicePi implements Runnable {
 					log.debug("Available commands: " + stateMachine.getAvailableCommands());
 				} else if (!stateMachine.isWaitingForActivation() && stateMachine.isActivationNeeded()) {
 					log.info("Timed out");
+					stt.pauseRecognition();
 					settings.onTimeout.execute(this, log, "onTimeout");
+					stt.resumeRecognition();
 					stateMachine.resetState();
 				}
 			} catch (InterruptedException e) {
@@ -106,9 +108,11 @@ public class VoicePi implements Runnable {
 				break;
 			}
 		}
-		if (state == stateMachine.getRoot() && stateMachine.isActivationNeeded()) {
+		if (stateMachine.isActivationNeeded() && state == stateMachine.getRoot()) {
 			log.info("Activated.");
+			stt.pauseRecognition();
 			settings.onActivation.execute(this, log, "onActivation");
+			stt.resumeRecognition();
 			return;
 		}
 		if (responsible != null) {
@@ -117,9 +121,13 @@ public class VoicePi implements Runnable {
 			// initialState: The state before this command was spoken and thus the state this command belongs to
 			responsible.onCommandSpoken(initialState, command);
 			stt.resumeRecognition();
+		} else if (stateMachine.isActivationNeeded() && initialState == stateMachine.getStart()) {
+			log.info("You need to activate first");
 		} else {
 			log.info("What you just said makes no sense, sorry");
+			stt.pauseRecognition();
 			settings.onWrongCommand.execute(this, log, "onWrongCommand");
+			stt.resumeRecognition();
 		}
 	}
 

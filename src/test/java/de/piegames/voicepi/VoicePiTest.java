@@ -17,8 +17,7 @@ public class VoicePiTest {
 	 */
 	@Test
 	public void testTest() throws URISyntaxException, IOException, InterruptedException {
-		// TODO fix path
-		Configuration config = new Configuration(Paths.get(getClass().getResource("../../../testconfig.json").toURI()));
+		Configuration config = new Configuration(Paths.get(getClass().getResource("/testconfig.json").toURI()));
 		VoicePi control = new VoicePi(config);
 		control.reload();
 		QueueRecognizer stt = (QueueRecognizer) control.getSTT();
@@ -30,7 +29,6 @@ public class VoicePiTest {
 
 		assertEquals("Starting VoicePi", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("TEST");
-		assertEquals("BOOOO", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("TEST");
@@ -62,8 +60,7 @@ public class VoicePiTest {
 	/** This test will load the same configuration, but use a more advanced ActionModule with different state. */
 	@Test
 	public void multistateTest() throws URISyntaxException, IOException, InterruptedException {
-		// TODO fix path
-		Configuration config = new Configuration(Paths.get(getClass().getResource("../../../testconfig.json").toURI()));
+		Configuration config = new Configuration(Paths.get(getClass().getResource("/testconfig.json").toURI()));
 		VoicePi control = new VoicePi(config);
 		control.reload();
 		QueueRecognizer stt = (QueueRecognizer) control.getSTT();

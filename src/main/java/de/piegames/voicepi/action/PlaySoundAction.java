@@ -21,6 +21,7 @@ public class PlaySoundAction extends Action {
 	@Override
 	public void execute(VoicePi control) throws IOException, InterruptedException {
 		try {
+			log.debug("Playing " + soundfile);
 			SpeechEngine.playSound(AudioSystem.getAudioInputStream(new File(soundfile)));
 		} catch (LineUnavailableException | UnsupportedAudioFileException e) {
 			log.warn("Could not play sound " + soundfile, e);

@@ -4,7 +4,7 @@
   <groupId>de.piegames</groupId>
   <artifactId>voicepi</artifactId>
   <name>VoicePi</name>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>A cross-platform voice control application primarily targetting Raspberry Pi</description>
   <url>https://github.com/piegamesde/VoicePi/</url>
   <issueManagement>
@@ -54,6 +54,11 @@
         <configuration>
           <descriptor>src/assembly/dep.xml</descriptor>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>2.5</version>
       </plugin>
     </plugins>
   </build>

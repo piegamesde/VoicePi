@@ -13,8 +13,8 @@
 			<outputDirectory>./</outputDirectory>
 			<includes>
 				<include>README*</include>
-				<include>config.json</include>
 				<include>scripts/*</include>
+				<include>sounds/*</include>
 			</includes>
 		</fileSet>
 		<fileSet>

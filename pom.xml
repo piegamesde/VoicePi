@@ -5,11 +5,10 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.piegames</groupId>
 	<artifactId>voicepi</artifactId>
-	<version>0.1.0</version>
+	<version>0.2.0</version>
 	<name>VoicePi</name>
 	<description>A cross-platform voice control application primarily targetting Raspberry Pi</description>
 	<build>
-		<!-- resources> <resource> <directory>src/main/resources</directory> </resource> <resource> <directory>src/test/resources</directory> </resource> <resource> <directory>libraries</directory> </resource> </resources -->
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>

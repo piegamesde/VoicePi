@@ -1,8 +1,9 @@
 package de.piegames.voicepi;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URISyntaxException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -53,16 +54,20 @@ public class Configuration {
 	}
 
 	public void loadDefaultConfig() {
-		log.info("Loading default configuration");
-		// TODO fix path
-		config = new JsonParser().parse(new InputStreamReader(getClass().getResourceAsStream("../../../defaultconfig.json"))).getAsJsonObject();
-		modulesConfig = config.getAsJsonObject("modules");
-		sttConfig = config.getAsJsonObject("stt");
-		ttsConfig = config.getAsJsonObject("tts");
-		settingsConfig = config;
+		log.info("Loading default configuration at " + getClass().getResource("/defaultconfig.json"));
+		try {
+			FileSystems.newFileSystem(getClass().getResource("/defaultconfig.json").toURI(), new HashMap<>());
+			loadConfig(Paths.get(getClass().getResource("/defaultconfig.json").toURI()));
+		} catch (IOException | URISyntaxException e) {
+			log.fatal("Cannot load default configuration. Please copy the defaultconfig.json from the jar to config.json manually and restart the application", e);
+		}
 	}
 
 	public void loadConfig() throws IOException {
+		loadConfig(path);
+	}
+
+	private void loadConfig(Path path) throws IOException {
 		// Load config
 		log.info("Loading configuration from file " + path.toAbsolutePath());
 		config = new JsonParser().parse(Files.newBufferedReader(path.toAbsolutePath())).getAsJsonObject();
