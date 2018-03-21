@@ -104,8 +104,8 @@ public class SphinxRecognizer extends SpeechRecognizer {
 		// Configure stt
 		Configuration sphinxConfig = new Configuration();
 		sphinxConfig.setAcousticModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us");
-		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toString());
-		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toString());
+		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
+		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
 		stt = new LiveSpeechRecognizer(sphinxConfig);
 	}
