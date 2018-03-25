@@ -9,16 +9,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 
 public class VoiceState {
 
 	protected final Log										log		= LogFactory.getLog(getClass());
 	protected final ContextState							root	= new ContextState("voicepi", "root");
-	protected ContextState									current	= root;
 	protected ContextState									start	= root;
+	public final ObjectProperty<ContextState>				current	= new SimpleObjectProperty<ContextState>(root);
 	protected MutableValueGraph<ContextState, CommandSet>	states	= ValueGraphBuilder.directed().build();
-
-	protected ObservableValue								test	= null;
 
 	public VoiceState() {
 	}
@@ -36,7 +36,7 @@ public class VoiceState {
 			states.removeNode(start);
 		if (commands == null || commands.isEmpty()) {
 			log.debug("Disabling activation commands");
-			if (current == start)
+			if (current.getValue() == start)
 				setState(root);
 			start = root;
 			return;
@@ -45,7 +45,7 @@ public class VoiceState {
 		start = new ContextState("voicepi", "listening");
 		states.addNode(start);
 		states.putEdgeValue(start, root, new CommandSet(null, commands));
-		if (current == root)
+		if (current.getValue() == root)
 			resetState();
 	}
 
@@ -84,11 +84,11 @@ public class VoiceState {
 	 * @return the {@code CommandSet} owning the command that was spoken or {@code null} if it didn't change
 	 */
 	public CommandSet commandSpoken(String command) {
-		for (ContextState node : states.successors(current)) {
-			CommandSet edge = states.edgeValue(current, node).get();
+		for (ContextState node : states.successors(current.getValue())) {
+			CommandSet edge = states.edgeValue(current.getValue(), node).get();
 			if (edge.commands.contains(command)) {
 				setState(node);
-				if (states.outDegree(current) == 0)
+				if (states.outDegree(current.getValue()) == 0)
 					resetState();
 				return edge;
 			}
@@ -101,16 +101,16 @@ public class VoiceState {
 	}
 
 	public boolean isWaitingForActivation() {
-		return current == start && isActivationNeeded();
+		return current.getValue() == start && isActivationNeeded();
 	}
 
 	public ContextState getCurrentState() {
-		return current;
+		return current.getValue();
 	}
 
 	/** Get all commands that could be spoken in the current state */
 	public Set<String> getAvailableCommands() {
-		return getAvailableCommands(current);
+		return getAvailableCommands(current.getValue());
 	}
 
 	/** Get all commands that could be spoken when in a given state */
@@ -130,7 +130,6 @@ public class VoiceState {
 	}
 
 	public void setState(ContextState newState) {
-		current = newState;
-
+		current.set(newState);
 	}
 }

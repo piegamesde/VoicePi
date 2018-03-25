@@ -13,6 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.state.ContextState;
+import javafx.beans.value.ChangeListener;
 
 public abstract class SpeechRecognizer implements Runnable {
 
@@ -36,6 +37,7 @@ public abstract class SpeechRecognizer implements Runnable {
 				activate.add(f.getAsString());
 		if (activate.isEmpty())
 			activate.add("*:*");
+		control.getStateMachine().current.addListener((ChangeListener<ContextState>) (observable, oldValue, newValue) -> onStateChanged(newValue));
 	}
 
 	public abstract void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException;
