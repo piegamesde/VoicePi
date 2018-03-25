@@ -1,4 +1,9 @@
-VERSION 0.2
+VERSION 0.2.1
+- Fixed Windows paths
+- Added run scripts
+- Updated .gitignore
+
+VERSION 0.2.0
 - Added Actions. Use Actions to run commands, play sound or say text
 - Added settings based on these actions
 - Made TTS and STT configurable

@@ -7,6 +7,7 @@ import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.state.CommandSet;
 import de.piegames.voicepi.state.ContextState;
 
 public class ApplicationModule extends Module {
@@ -28,18 +29,18 @@ public class ApplicationModule extends Module {
 	}
 
 	@Override
-	public MutableValueGraph<ContextState<Module>, Set<String>> listCommands(ContextState<Module> root) {
-		MutableValueGraph<ContextState<Module>, Set<String>> ret = ValueGraphBuilder.directed().build();
+	public MutableValueGraph<ContextState, CommandSet> listCommands(ContextState root) {
+		MutableValueGraph<ContextState, CommandSet> ret = ValueGraphBuilder.directed().build();
 		Set<String> commands = new HashSet<>();
 		commands.addAll(exit);
 		commands.addAll(reload);
-		ContextState<Module> node = new ContextState<>(this, "end");
-		ret.putEdgeValue(root, node, commands);
+		ContextState node = new ContextState(name, "end");
+		ret.putEdgeValue(root, node, new CommandSet(this, commands));
 		return ret;
 	}
 
 	@Override
-	public void onCommandSpoken(ContextState<Module> currentState, String command) {
+	public void onCommandSpoken(ContextState currentState, String command) {
 		if (exit.contains(command))
 			control.exitApplication();
 		else if (reload.contains(command))

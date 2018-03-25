@@ -1,28 +1,31 @@
 package de.piegames.voicepi.stt;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import com.google.gson.JsonObject;
+import de.piegames.voicepi.VoicePi;
 
 public class StdInRecognizer extends SpeechRecognizer {
 
 	protected Scanner scanner;
 
-	public StdInRecognizer(JsonObject config) {
-		super(config);
+	public StdInRecognizer(VoicePi control, JsonObject config) {
+		super(control, config);
 	}
 
 	@Override
-	public void load(Set<String> commands) throws IOException {
+	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		this.commandsSpoken = commandsSpoken;
 		scanner = new Scanner(System.in);
 	}
 
 	@Override
 	public void run() {
 		while (!Thread.currentThread().isInterrupted())
-			commandsSpoken.add(Arrays.asList(scanner.nextLine()));
+			commandSpoken(scanner.nextLine());
 	}
 
 	@Override

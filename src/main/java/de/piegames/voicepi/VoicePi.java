@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -22,6 +24,7 @@ import com.google.gson.stream.JsonWriter;
 import de.piegames.voicepi.action.Action;
 import de.piegames.voicepi.action.Action.ActionType;
 import de.piegames.voicepi.module.Module;
+import de.piegames.voicepi.state.CommandSet;
 import de.piegames.voicepi.state.ContextState;
 import de.piegames.voicepi.state.VoiceState;
 import de.piegames.voicepi.stt.DeafRecognizer;
@@ -33,17 +36,18 @@ import io.gsonfire.TypeSelector;
 
 public class VoicePi implements Runnable {
 
-	protected static final Log		log			= LogFactory.getLog(VoicePi.class);
+	protected static final Log					log			= LogFactory.getLog(VoicePi.class);
 
-	protected boolean				listening	= false;
-	protected boolean				exit;
-	protected VoiceState<Module>	stateMachine;
-	protected SpeechEngine			tts;
-	protected SpeechRecognizer		stt;
-	protected Map<String, Module>	modules		= new HashMap<>();
-	protected Settings				settings	= new Settings();
+	protected boolean							listening	= false;
+	protected boolean							exit;
+	protected VoiceState						stateMachine;
+	protected SpeechEngine						tts;
+	protected BlockingQueue<Collection<String>>	commandsSpoken;
+	protected SpeechRecognizer					stt;
+	protected Map<String, Module>				modules		= new HashMap<>();
+	protected Settings							settings	= new Settings();
 
-	protected Configuration			config;
+	protected Configuration						config;
 
 	public VoicePi(Configuration config) {
 		this.config = Objects.requireNonNull(config);
@@ -58,17 +62,17 @@ public class VoicePi implements Runnable {
 		log.debug("Available commands: " + stateMachine.getAvailableCommands());
 		while (!exit) {
 			try {
-				Collection<String> spoken = stt.commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
+				Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
 				if (spoken != null) {
 					onCommandSpoken(spoken);
 					log.debug("Current state: " + stateMachine.getCurrentState());
 					log.debug("Available commands: " + stateMachine.getAvailableCommands());
 				} else if (!stateMachine.isWaitingForActivation() && stateMachine.isActivationNeeded()) {
 					log.info("Timed out");
-					stt.pauseRecognition();
+					stt.deafenRecognition(true);
 					settings.onTimeout.execute(this, log, "onTimeout");
-					stt.resumeRecognition();
 					stateMachine.resetState();
+					stt.deafenRecognition(false);
 				}
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -91,7 +95,7 @@ public class VoicePi implements Runnable {
 	public void onCommandSpoken(Collection<String> possibleCommand) {
 		log.debug("You might have said: " + Arrays.toString(possibleCommand.toArray()));
 		Module responsible = null;
-		ContextState<Module> state = null, initialState = stateMachine.getCurrentState();
+		ContextState initialState = stateMachine.getCurrentState();
 		String command = null;
 		for (String s : possibleCommand) {
 			if (s.startsWith("<s>"))
@@ -100,40 +104,42 @@ public class VoicePi implements Runnable {
 				s = s.substring(0, s.length() - 4);
 			s = s.trim();
 
-			ContextState<Module> module = stateMachine.commandSpoken(s);
-			if (module != null) {
-				state = module;
-				responsible = state.owner;
+			CommandSet edge = stateMachine.commandSpoken(s);
+			if (edge != null) {
+				responsible = edge.owner;
 				command = s;
 				break;
 			}
 		}
+		ContextState state = stateMachine.getCurrentState();
 		if (stateMachine.isActivationNeeded() && state == stateMachine.getRoot()) {
 			log.info("Activated.");
-			stt.pauseRecognition();
+			stt.deafenRecognition(true);
 			settings.onActivation.execute(this, log, "onActivation");
-			stt.resumeRecognition();
+			stt.deafenRecognition(false);
 			return;
 		}
 		if (responsible != null) {
-			stt.pauseRecognition();
+			stt.deafenRecognition(true);
 			settings.onCommandSpoken.execute(this, log, "onCommandSpoken");
 			// initialState: The state before this command was spoken and thus the state this command belongs to
 			responsible.onCommandSpoken(initialState, command);
-			stt.resumeRecognition();
+			stt.deafenRecognition(false);
 		} else if (stateMachine.isActivationNeeded() && initialState == stateMachine.getStart()) {
 			log.info("You need to activate first");
 		} else {
 			log.info("What you just said makes no sense, sorry");
-			stt.pauseRecognition();
+			stt.deafenRecognition(true);
 			settings.onWrongCommand.execute(this, log, "onWrongCommand");
-			stt.resumeRecognition();
+			stt.deafenRecognition(false);
 		}
 	}
 
 	public void reload() {
+		log.info("Reloading the configuration");
 		settings.onReload.execute(this, log, "onReload");
 
+		commandsSpoken = new LinkedBlockingQueue<>();
 		// Close modules
 		if (stt != null) {
 			stt.stopRecognition();
@@ -141,7 +147,6 @@ public class VoicePi implements Runnable {
 			stt = null;
 		}
 		tts = null;
-		log.info("Reloading all modules");
 		modules.values().forEach(Module::close);
 		modules.clear();
 
@@ -174,7 +179,7 @@ public class VoicePi implements Runnable {
 		}
 
 		// Initialize state machine
-		stateMachine = new VoiceState<>();
+		stateMachine = new VoiceState();
 		stateMachine.setActivationCommands(settings.activationCommands);
 
 		// stateMachine.setActivationCommands(
@@ -200,18 +205,18 @@ public class VoicePi implements Runnable {
 			// TODO use Optional
 			stt = config.getSTT();
 			if (stt == null)
-				stt = config.loadSTTFromConfig();
+				stt = config.loadSTTFromConfig(this);
 
 			try {
 				if (stt != null)
-					stt.load(commands);
+					stt.load(commandsSpoken, commands);
 			} catch (IOException e) {
 				log.error("Could not load the speech recognition module; switching to DeafRecognizer", e);
 				stt = null;
 			}
 
 			if (stt == null)
-				stt = new DeafRecognizer(null);
+				stt = new DeafRecognizer(this);
 			stt.startRecognition();
 		}
 		{ // Load TTS
@@ -245,6 +250,14 @@ public class VoicePi implements Runnable {
 
 	public SpeechRecognizer getSTT() {
 		return stt;
+	}
+
+	public ContextState getCurrentState() {
+		return stateMachine.getCurrentState();
+	}
+
+	public VoiceState getStateMachine() {
+		return stateMachine;
 	}
 
 	public Settings getSettings() {

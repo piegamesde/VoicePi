@@ -3,7 +3,6 @@ package de.piegames.voicepi.module;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import com.google.common.base.Optional;
 import com.google.common.graph.EndpointPair;
@@ -12,6 +11,7 @@ import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.action.Action;
+import de.piegames.voicepi.state.CommandSet;
 import de.piegames.voicepi.state.ContextState;
 
 public class ActionModule extends Module {
@@ -57,34 +57,36 @@ public class ActionModule extends Module {
 	}
 
 	@Override
-	public MutableValueGraph<ContextState<Module>, Set<String>> listCommands(ContextState<Module> root) {
-		Map<String, ContextState<Module>> states = commands
+	public MutableValueGraph<ContextState, CommandSet> listCommands(ContextState root) {
+		Map<String, ContextState> states = commands
 				.nodes()
 				.stream()
 				.filter(s -> !s.equals("root"))
-				.collect(Collectors.toMap(s -> s, s -> new ContextState<>(this, s)));
+				.collect(Collectors.toMap(s -> s, s -> new ContextState(name, s)));
 		states.put("root", root);
 
-		MutableValueGraph<ContextState<Module>, Set<String>> ret = ValueGraphBuilder.directed().build();
+		MutableValueGraph<ContextState, CommandSet> ret = ValueGraphBuilder.directed().build();
 		// ret.putEdgeValue(root, node, Collections.unmodifiableSet(startCommands.keySet()));
 		for (EndpointPair<String> edge : commands.edges()) {
-			ret.putEdgeValue(states.get(edge.source()), states.get(edge.target()), commands.edgeValue(edge.source(), edge.target()).get().keySet());
+			ret.putEdgeValue(
+					states.get(edge.source()),
+					states.get(edge.target()),
+					new CommandSet(this, commands.edgeValue(edge.source(), edge.target()).get().keySet()));
 		}
 		return ret;
 	}
 
 	@Override
-	public void onCommandSpoken(ContextState<Module> currentState, String command) {
+	public void onCommandSpoken(ContextState currentState, String command) {
 		try {
-			System.out.println(currentState);
-			for (String nextState : commands.successors(currentState.name)) {
-				Optional<Action> action = Optional.fromNullable(commands.edgeValue(currentState.name, nextState).get().get(command));
+			for (String nextState : commands.successors(currentState.state)) {
+				Optional<Action> action = Optional.fromNullable(commands.edgeValue(currentState.state, nextState).get().get(command));
 				if (action.isPresent()) {
 					action.get().execute(control);
 					return;
 				}
 			}
-			log.warn("Command " + command + " is not registered for state " + currentState.name);
+			log.warn("Command " + command + " is not registered for state " + currentState.state);
 		} catch (IOException e) {
 			log.warn("Could not execute command '" + command + "'", e);
 		} catch (InterruptedException e) {

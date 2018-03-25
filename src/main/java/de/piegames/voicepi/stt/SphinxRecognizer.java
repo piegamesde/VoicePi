@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
@@ -25,6 +26,7 @@ import org.apache.http.util.EntityUtils;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.CommandsCache;
 import de.piegames.voicepi.CommandsCache.CacheElement;
+import de.piegames.voicepi.VoicePi;
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.LiveSpeechRecognizer;
 import edu.cmu.sphinx.api.SpeechResult;
@@ -32,15 +34,15 @@ import edu.cmu.sphinx.api.SpeechResult;
 @SuppressWarnings("deprecation")
 public class SphinxRecognizer extends SpeechRecognizer {
 
-	protected LiveSpeechRecognizer	stt;
-	protected volatile boolean		ignoreCommands	= false;
+	protected LiveSpeechRecognizer stt;
 
-	public SphinxRecognizer(JsonObject config) {
-		super(config);
+	public SphinxRecognizer(VoicePi control, JsonObject config) {
+		super(control, config);
 	}
 
 	@Override
-	public void load(Set<String> commands) throws IOException {
+	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		this.commandsSpoken = commandsSpoken;
 		// Check cache
 		CommandsCache cache = new CommandsCache(Paths.get("cache.json"));
 		cache.loadFromCache();
@@ -119,7 +121,7 @@ public class SphinxRecognizer extends SpeechRecognizer {
 				log.info("You said: " + result.getHypothesis());
 				Collection<String> best = result.getNbest(Integer.MAX_VALUE);
 				// TODO actually sort them by quality
-				if (!ignoreCommands)
+				if (!deaf && isStateEnabled())
 					commandsSpoken.offer(best);
 			}
 		}
@@ -147,23 +149,6 @@ public class SphinxRecognizer extends SpeechRecognizer {
 		} catch (IllegalStateException e) {
 			log.error("Could not stop voice recognition", e);
 		}
-	}
-
-	@Override
-	public void pauseRecognition() {
-		log.debug("Pausing SphinxRecognizer");
-		// stt.stopRecognition();
-		// TODO starting and stopping takes quite a lot of time. Instead, don't stop it and just discard the results. (This needs to be tested because it might
-		// not work)
-		ignoreCommands = true;
-	}
-
-	@Override
-	public void resumeRecognition() {
-		log.debug("Resuming SphinxRecognizer");
-		// stopRecognition();
-		// stt.startRecognition(true);
-		ignoreCommands = false;
 	}
 
 	@Override

@@ -85,7 +85,7 @@ public class Configuration {
 	}
 
 	public JsonObject getSTTConfig() {
-		return sttConfig.getAsJsonObject();
+		return sttConfig;
 	}
 
 	public JsonObject getTTSConfig() {
@@ -124,11 +124,11 @@ public class Configuration {
 		return ret;
 	}
 
-	public SpeechRecognizer loadSTTFromConfig() {
+	public SpeechRecognizer loadSTTFromConfig(VoicePi control) {
 		try {
 			return (SpeechRecognizer) Class.forName(sttConfig.getAsJsonPrimitive("class-name").getAsString())
-					.getConstructor(JsonObject.class)
-					.newInstance(sttConfig);
+					.getConstructor(VoicePi.class, JsonObject.class)
+					.newInstance(control, sttConfig);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.warn("Could not instantiate speech recognizer as specified in the config file", e);
 			return null;

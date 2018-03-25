@@ -1,28 +1,44 @@
 package de.piegames.voicepi.stt;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.state.ContextState;
 
 public abstract class SpeechRecognizer implements Runnable {
 
-	protected final Log								log	= LogFactory.getLog(getClass());
-	protected JsonObject							config;
-	// TODO make read-only
-	public final BlockingQueue<Collection<String>>	commandsSpoken;
-	protected Thread								thread;
+	protected final Log							log			= LogFactory.getLog(getClass());
+	protected JsonObject						config;
+	protected BlockingQueue<Collection<String>>	commandsSpoken;
+	protected Thread							thread;
+	protected List<String>						activate	= new ArrayList<>();
+	protected VoicePi							control;
+	protected volatile boolean					deaf;
 
-	public SpeechRecognizer(JsonObject config) {
+	public SpeechRecognizer(VoicePi control, JsonObject config) {
 		this.config = config;
-		commandsSpoken = new LinkedBlockingQueue<>();
+		this.control = control;
+		if (config == null || config.isJsonNull() || !config.has("active-on"))
+			;
+		else if (config.get("active-on").isJsonPrimitive())
+			activate.add(config.getAsJsonPrimitive("active-on").getAsString());
+		else
+			for (JsonElement f : config.getAsJsonArray("active-on"))
+				activate.add(f.getAsString());
+		if (activate.isEmpty())
+			activate.add("*:*");
 	}
 
-	public abstract void load(Set<String> commands) throws IOException;
+	public abstract void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException;
 
 	/**
 	 * Called in a background thread. This method will continuously listen for any spoken commands and add them to {@code #commandsSpoken}.
@@ -44,23 +60,42 @@ public abstract class SpeechRecognizer implements Runnable {
 	 */
 	public void stopRecognition() {
 		thread.interrupt();
+		thread = null;
+	}
+
+	protected boolean isRunning() {
+		return thread != null;
+	}
+
+	public void onStateChanged(ContextState current) {
+
+	}
+
+	protected boolean isStateEnabled() {
+		ContextState current = control.getCurrentState();
+		return activate.stream().anyMatch(s -> current.matches(s));
+	}
+
+	protected void commandSpoken(String command) {
+		commandSpoken(Arrays.asList(command));
+	}
+
+	protected void commandSpoken(Collection<String> command) {
+		if (isStateEnabled())
+			commandsSpoken.offer(command);
 	}
 
 	/**
-	 * This will stop the recognizer from listening. It is not necessary to stop the background thread if other possibilities are available, but it is still
-	 * possible.
+	 * This will stop the recognizer from listening. The recognizer will not "hear" anything until {@code #undeafenRecognition()} is called. This is to prevent
+	 * recording the output of the speech synthesis as command again. This should have no effect to those recognizers who don't rely on the microphone.
 	 */
-	public void pauseRecognition() {
-		stopRecognition();
-	}
-
-	/** This will resume a paused recognition, returning it back to normal state. */
-	public void resumeRecognition() {
-		startRecognition();
+	public void deafenRecognition(boolean deaf) {
+		log.debug(deaf ? "Pausing " : "Resuming " + getClass().getSimpleName());
+		this.deaf = deaf;
 	}
 
 	/** Unloads and releases all resources. The object won't be used after this method being called. */
 	public void unload() {
-
+		commandsSpoken = null;
 	}
 }
