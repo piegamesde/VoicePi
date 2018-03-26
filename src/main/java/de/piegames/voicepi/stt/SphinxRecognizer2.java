@@ -32,11 +32,11 @@ import edu.cmu.sphinx.api.LiveSpeechRecognizer2;
 import edu.cmu.sphinx.api.SpeechResult;
 
 @SuppressWarnings("deprecation")
-public class SphinxRecognizer extends SpeechRecognizer {
+public class SphinxRecognizer2 extends SpeechRecognizer {
 
 	protected LiveSpeechRecognizer2 stt;
 
-	public SphinxRecognizer(VoicePi control, JsonObject config) {
+	public SphinxRecognizer2(VoicePi control, JsonObject config) {
 		super(control, config);
 	}
 
@@ -114,6 +114,32 @@ public class SphinxRecognizer extends SpeechRecognizer {
 
 	@Override
 	public void run() {
+
+		// AudioFormat format = new AudioFormat(44100, 16, 2, true, true);
+		//
+		// DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, format);
+		//
+		// try {
+		// TargetDataLine targetLine = (TargetDataLine) AudioSystem.getLine(targetInfo);
+		// targetLine.open(format);
+		// targetLine.start();
+		//// targetLine.
+		//
+		// int numBytesRead;
+		// byte[] targetData = new byte[targetLine.getBufferSize() / 5];
+		//
+		// while (true) {
+		// numBytesRead = targetLine.read(targetData, 0, targetData.length);
+		//
+		// if (numBytesRead == -1) break;
+		//
+		//// sourceLine.write(targetData, 0, numBytesRead);
+		// }
+		// }
+		// catch (Exception e) {
+		// System.err.println(e);
+		// }
+
 		SpeechResult result;
 		while (!Thread.currentThread().isInterrupted()) {
 			log.debug("Listening");

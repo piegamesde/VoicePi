@@ -19,24 +19,6 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<groupId>com.zenjava</groupId>
-				<artifactId>javafx-maven-plugin</artifactId>
-				<version>8.9.0-SNAPSHOT</version>
-				<configuration>
-					<mainClass></mainClass>
-					<verbose>true</verbose>
-				</configuration>
-				<executions>
-					<execution>
-						<id>create-jfxjar</id>
-						<phase>package</phase>
-						<goals>
-							<goal>build-jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>3.1.0</version>
