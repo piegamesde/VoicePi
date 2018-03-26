@@ -132,4 +132,8 @@ public class VoiceState {
 	public void setState(ContextState newState) {
 		current.set(newState);
 	}
+
+	public boolean isIdle() {
+		return isActivationNeeded() ? current.get() == start : current.get() == root;
+	}
 }

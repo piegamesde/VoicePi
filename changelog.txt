@@ -1,3 +1,8 @@
+VERSION 0.3.0
+- Added MultiRecognizer and MultiSpeechEngine, allowing to combine multiple inputs and outputs
+- Changed how context states work. Inter-module communication is possible now, but won't be exposed to the used through configuration
+- Passive modules that monitor things in the background and notify you once somethings happens. There are none yet, but they are technically possible now
+
 VERSION 0.2.1
 - Fixed Windows paths
 - Added run scripts

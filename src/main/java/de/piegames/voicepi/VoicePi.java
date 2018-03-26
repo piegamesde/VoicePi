@@ -9,9 +9,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,16 +38,17 @@ import io.gsonfire.TypeSelector;
 
 public class VoicePi implements Runnable {
 
-	protected static final Log					log			= LogFactory.getLog(VoicePi.class);
+	protected static final Log					log				= LogFactory.getLog(VoicePi.class);
 
-	protected boolean							listening	= false;
+	protected boolean							listening		= false;
 	protected boolean							exit;
 	protected VoiceState						stateMachine;
 	protected SpeechEngine						tts;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected SpeechRecognizer					stt;
-	protected Map<String, Module>				modules		= new HashMap<>();
-	protected Settings							settings	= new Settings();
+	protected Map<String, Module>				modules			= new HashMap<>();
+	protected Settings							settings		= new Settings();
+	protected final Queue<ContextState>			notifications	= new SynchronousQueue<>();
 
 	protected Configuration						config;
 
@@ -62,6 +65,12 @@ public class VoicePi implements Runnable {
 		log.debug("Available commands: " + stateMachine.getAvailableCommands());
 		while (!exit) {
 			try {
+				if (!notifications.isEmpty() && stateMachine.isIdle()) {
+					Thread.sleep(1000);
+					ContextState state = notifications.remove();
+					log.info("Push notification incoming: " + state);
+					stateMachine.current.set(state);
+				}
 				Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
 				if (spoken != null) {
 					onCommandSpoken(spoken);
@@ -139,6 +148,7 @@ public class VoicePi implements Runnable {
 		log.info("Reloading the configuration");
 		settings.onReload.execute(this, log, "onReload");
 
+		notifications.clear();
 		commandsSpoken = new LinkedBlockingQueue<>();
 		// Close modules
 		if (stt != null) {
@@ -262,6 +272,10 @@ public class VoicePi implements Runnable {
 
 	public Settings getSettings() {
 		return settings;
+	}
+
+	public void pushNotification(ContextState state) {
+		notifications.add(state);
 	}
 
 	public static void main(String... args) {
