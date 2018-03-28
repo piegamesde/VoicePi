@@ -3,9 +3,12 @@
  *
  * See the file "license.terms" for information on usage and redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES. */
 
-package edu.cmu.sphinx.api;
+package de.piegames.voicepi.stt;
 
 import java.io.IOException;
+import javax.sound.sampled.AudioFormat;
+import edu.cmu.sphinx.api.AbstractSpeechRecognizer;
+import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.frontend.util.StreamDataSource;
 
 /**
@@ -21,10 +24,10 @@ public class LiveSpeechRecognizer2 extends AbstractSpeechRecognizer {
 	 * @param configuration common configuration
 	 * @throws IOException if model IO went wrong
 	 */
-	public LiveSpeechRecognizer2(Configuration configuration) throws IOException {
+	public LiveSpeechRecognizer2(Configuration configuration, AudioFormat format) throws IOException {
 		super(configuration);
 		// microphone = speechSourceProvider.getMicrophone();
-		microphone = new Microphone2(44800, 16, true, true);
+		microphone = new Microphone2(format);
 		context.getInstance(StreamDataSource.class)
 				.setInputStream(microphone.getStream());
 	}

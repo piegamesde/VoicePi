@@ -5,12 +5,15 @@ import java.util.Collection;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 
 public class StdInRecognizer extends SpeechRecognizer {
 
-	protected Scanner scanner;
+	protected volatile boolean			ignoreExceptions	= false;
+	protected Scanner					scanner;
+	protected InterruptibleInputStream	in;
 
 	public StdInRecognizer(VoicePi control, JsonObject config) {
 		super(control, config);
@@ -19,20 +22,25 @@ public class StdInRecognizer extends SpeechRecognizer {
 	@Override
 	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
 		this.commandsSpoken = commandsSpoken;
-		scanner = new Scanner(System.in);
+		scanner = new Scanner(in = new InterruptibleInputStream(new CloseShieldInputStream(System.in)));
 	}
 
 	@Override
 	public void run() {
-		while (!Thread.currentThread().isInterrupted())
-			commandSpoken(scanner.nextLine());
+		try {
+			while (!Thread.interrupted())
+				commandSpoken(scanner.nextLine());
+		} catch (RuntimeException e) {
+			if (Thread.interrupted() || ignoreExceptions)
+				return;// Ignore since it will throw an exception when interrupted
+			log.warn("Exception while reading", e);
+		}
 	}
 
 	@Override
 	public void stopRecognition() {
+		ignoreExceptions = true;
 		thread.interrupt();
-		Thread.yield();
-		// It was either this, or active waiting in the run() method. I opted for the shorter solution
-		thread.stop();
+		scanner.close();
 	}
 }

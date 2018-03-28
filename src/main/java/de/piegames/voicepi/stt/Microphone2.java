@@ -3,13 +3,12 @@
  *
  * See the file "license.terms" for information on usage and redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES. */
 
-package edu.cmu.sphinx.api;
+package de.piegames.voicepi.stt;
 
 import java.io.InputStream;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 
@@ -21,22 +20,16 @@ public class Microphone2 {
 	private final TargetDataLine	line;
 	private final InputStream		inputStream;
 
-	public Microphone2(
-			float sampleRate,
-			int sampleSize,
-			boolean signed,
-			boolean bigEndian) {
-		AudioFormat format = new AudioFormat(sampleRate, sampleSize, 2, signed, bigEndian);
-		DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, format);
+	public Microphone2(AudioFormat format) {
 		try {
-			// line = AudioSystem.getTargetDataLine(format);
-			line = (TargetDataLine) AudioSystem.getLine(targetInfo);
-			line.open();
+			line = AudioSystem.getTargetDataLine(format);
+			line.open(format);
 		} catch (LineUnavailableException e) {
 			throw new IllegalStateException(e);
 		}
-		AudioInputStream inputStream = new AudioInputStream(line);
-		this.inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), inputStream);
+		// inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(new InterruptibleInputStream(new
+		// AudioInputStream(line)), format, format.getFrameSize()));
+		inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(line));
 	}
 
 	public void startRecording() {

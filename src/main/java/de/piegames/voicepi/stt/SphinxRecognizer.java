@@ -28,13 +28,13 @@ import de.piegames.voicepi.CommandsCache;
 import de.piegames.voicepi.CommandsCache.CacheElement;
 import de.piegames.voicepi.VoicePi;
 import edu.cmu.sphinx.api.Configuration;
-import edu.cmu.sphinx.api.LiveSpeechRecognizer2;
+import edu.cmu.sphinx.api.LiveSpeechRecognizer;
 import edu.cmu.sphinx.api.SpeechResult;
 
 @SuppressWarnings("deprecation")
 public class SphinxRecognizer extends SpeechRecognizer {
 
-	protected LiveSpeechRecognizer2 stt;
+	protected LiveSpeechRecognizer stt;
 
 	public SphinxRecognizer(VoicePi control, JsonObject config) {
 		super(control, config);
@@ -109,7 +109,7 @@ public class SphinxRecognizer extends SpeechRecognizer {
 		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
 		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
-		stt = new LiveSpeechRecognizer2(sphinxConfig);
+		stt = new LiveSpeechRecognizer(sphinxConfig);
 	}
 
 	@Override

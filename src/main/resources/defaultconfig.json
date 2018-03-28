@@ -34,8 +34,16 @@
 		"class-name": "de.piegames.voicepi.tts.FreeSpeechEngine"
 	},
 	"stt": {
-		"class-name": "de.piegames.voicepi.stt.SphinxRecognizer",
-		"corpus-history-size": 10
+		"class-name": "de.piegames.voicepi.stt.MultiRecognizer",
+		"engines": [
+			{
+				"class-name": "de.piegames.voicepi.stt.SphinxRecognizer",
+				"corpus-history-size": 10
+			},
+			{
+				"class-name": "de.piegames.voicepi.stt.StdInRecognizer"
+			}
+		]
 	},
 	"active-modules": [
 		"shell",
@@ -46,9 +54,8 @@
 			"class-name": "de.piegames.voicepi.module.ActionModule",
 			"commands": {
 				"TEST": {
-					"action": "run-command",
-					"command": "echo Hello world",
-					"stdout-to-tts": "true"
+					"action": "say-text",
+					"text": "Hello world"
 				}
 			}
 		},

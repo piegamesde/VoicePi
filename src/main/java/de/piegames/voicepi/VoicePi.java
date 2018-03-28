@@ -94,6 +94,7 @@ public class VoicePi implements Runnable {
 				break;
 			}
 		}
+		log.debug("Quit main loop");
 		exitApplication();
 	}
 
@@ -250,8 +251,8 @@ public class VoicePi implements Runnable {
 		stt.stopRecognition();
 		stt.unload();
 		modules.values().forEach(Module::close);
-		log.info("Quitting application");
 		settings.onExit.execute(this, log, "onExit");
+		log.info("Quitting application");
 	}
 
 	public SpeechEngine getTTS() {
@@ -279,7 +280,6 @@ public class VoicePi implements Runnable {
 	}
 
 	public static void main(String... args) {
-		// TODO add CLI
 		Configuration config = new Configuration();
 		VoicePi control = new VoicePi(config);
 		control.reload();

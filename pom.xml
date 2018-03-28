@@ -187,6 +187,11 @@
 			<artifactId>guava</artifactId>
 			<version>24.0-jre</version>
 		</dependency>
+		<dependency>
+			<groupId>com.google.cloud</groupId>
+			<artifactId>google-cloud-speech</artifactId>
+			<version>0.41.0-alpha</version>
+		</dependency>
 
 		<dependency>
 			<groupId>junit</groupId>

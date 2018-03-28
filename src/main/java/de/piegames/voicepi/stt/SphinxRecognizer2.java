@@ -14,9 +14,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.TargetDataLine;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -32,16 +29,22 @@ import de.piegames.voicepi.CommandsCache;
 import de.piegames.voicepi.CommandsCache.CacheElement;
 import de.piegames.voicepi.VoicePi;
 import edu.cmu.sphinx.api.Configuration;
-import edu.cmu.sphinx.api.LiveSpeechRecognizer2;
 import edu.cmu.sphinx.api.SpeechResult;
 
 @SuppressWarnings("deprecation")
 public class SphinxRecognizer2 extends SpeechRecognizer {
 
-	protected LiveSpeechRecognizer2 stt;
+	protected LiveSpeechRecognizer2	stt;
+	protected AudioFormat			format;
 
 	public SphinxRecognizer2(VoicePi control, JsonObject config) {
 		super(control, config);
+		float sampleRate = config.has("sample-rate") ? config.getAsJsonPrimitive("sample-rate").getAsFloat() : 16000;
+		int sampleSize = config.has("sample-size") ? config.getAsJsonPrimitive("sample-size").getAsInt() : 16;
+		int channels = config.has("channels") ? config.getAsJsonPrimitive("channels").getAsInt() : 1;
+		boolean signed = config.has("signed") ? config.getAsJsonArray("signed").getAsBoolean() : true;
+		boolean bigEndian = config.has("big-endian") ? config.getAsJsonArray("big-endian").getAsBoolean() : false;
+		format = new AudioFormat(sampleRate, sampleSize, channels, signed, bigEndian);
 	}
 
 	@Override
@@ -113,37 +116,11 @@ public class SphinxRecognizer2 extends SpeechRecognizer {
 		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
 		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
-		stt = new LiveSpeechRecognizer2(sphinxConfig);
+		stt = new LiveSpeechRecognizer2(sphinxConfig, format);
 	}
 
 	@Override
 	public void run() {
-
-		AudioFormat format = new AudioFormat(44100, 16, 2, true, true);
-
-		DataLine.Info targetInfo = new DataLine.Info(TargetDataLine.class, format);
-
-		try {
-			TargetDataLine targetLine = (TargetDataLine) AudioSystem.getLine(targetInfo);
-			targetLine.open(format);
-			targetLine.start();
-			// targetLine.
-
-			int numBytesRead;
-			byte[] targetData = new byte[targetLine.getBufferSize() / 5];
-
-			while (true) {
-				numBytesRead = targetLine.read(targetData, 0, targetData.length);
-
-				if (numBytesRead == -1)
-					break;
-
-				// sourceLine.write(targetData, 0, numBytesRead);
-			}
-		} catch (Exception e) {
-			System.err.println(e);
-		}
-
 		SpeechResult result;
 		while (!Thread.currentThread().isInterrupted()) {
 			log.debug("Listening");

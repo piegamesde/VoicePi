@@ -25,8 +25,8 @@ public class MultiRecognizer extends SpeechRecognizer {
 			JsonObject stt = e.getAsJsonObject();
 			try {
 				recognizers.add((SpeechRecognizer) Class.forName(stt.getAsJsonPrimitive("class-name").getAsString())
-						.getConstructor(JsonObject.class)
-						.newInstance(stt));
+						.getConstructor(VoicePi.class, JsonObject.class)
+						.newInstance(control, stt));
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException | ClassNotFoundException e1) {
 				log.warn("Could not instantiate speech recognizer " + stt.getAsJsonPrimitive("class-name").getAsString(), e1);
 			}
