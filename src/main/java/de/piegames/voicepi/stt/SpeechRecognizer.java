@@ -83,6 +83,7 @@ public abstract class SpeechRecognizer implements Runnable {
 	}
 
 	protected void commandSpoken(Collection<String> command) {
+		log.debug("Command spoken [" + String.join(", ", command) + "]" + (isStateEnabled() ? "" : " Will be ignored."));
 		if (isStateEnabled())
 			commandsSpoken.offer(command);
 	}
@@ -92,7 +93,7 @@ public abstract class SpeechRecognizer implements Runnable {
 	 * recording the output of the speech synthesis as command again. This should have no effect to those recognizers who don't rely on the microphone.
 	 */
 	public void deafenRecognition(boolean deaf) {
-		log.debug(deaf ? "Pausing " : "Resuming " + getClass().getSimpleName());
+		log.debug((deaf ? "Pausing " : "Resuming ") + getClass().getSimpleName());
 		this.deaf = deaf;
 	}
 
