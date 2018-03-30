@@ -1,24 +1,24 @@
 package de.piegames.voicepi.stt;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import org.freedesktop.gstreamer.Bus;
+import org.freedesktop.gstreamer.Element;
+import org.freedesktop.gstreamer.Gst;
+import org.freedesktop.gstreamer.Message;
+import org.freedesktop.gstreamer.Pipeline;
+import org.freedesktop.gstreamer.Structure;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 import edu.cmu.sphinx.api.Configuration;
 
 public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 
-	protected Process			process;
-	protected BufferedReader	stdOut;
-	protected Writer			stdIn;
-	protected Thread			thread2;
-	// protected LiveSpeechRecognizer stt;
+	protected Pipeline pipeline;
 
 	public PocketSphinxRecognizer(VoicePi control, JsonObject config) {
 		super(control, config);
@@ -36,67 +36,54 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 		log.debug("Dictionary path: " + dicPath.toAbsolutePath());
 		log.debug("Language model path: " + lmPath.toAbsolutePath());
 
-		process = new ProcessBuilder("python3", "./scripts/pocketsphinx.py", "--lm", lmPath.toAbsolutePath().toString(), "--dic",
-				dicPath.toAbsolutePath().toString()).start();
-		stdIn = new OutputStreamWriter(process.getOutputStream()); // Do not buffer here
-		stdOut = new BufferedReader(new InputStreamReader(process.getInputStream()));
+		Gst.init();
+		pipeline = Pipeline.launch("autoaudiosrc ! audioconvert !  audioresample ! pocketsphinx name=asr ! fakesink");
+		Element asr = pipeline.getElementByName("asr");
+		System.out.println(Arrays.toString(asr.listPropertyNames().toArray()));
+		asr.set("lm", lmPath.toAbsolutePath());
+		asr.set("dict", dicPath.toAbsolutePath());
+		Bus bus = pipeline.getBus();
+		bus.connect(new Bus.MESSAGE() {
+
+			@Override
+			public void busMessage(Bus bus, Message message) {
+				try {
+					Structure s = message.getStructure();
+					if (isRunning() && !deaf && s != null && "pocketsphinx".equals(s.getName()) && s.getValue("final").equals(true)) {
+						String said = s.getValue("hypothesis").toString();
+						if (!said.isEmpty()) {
+							LinkedList<String> words = new LinkedList<>(Arrays.asList(said.split(" ")));
+							LinkedList<String> spoken = new LinkedList<>();
+							while (!words.isEmpty()) {
+								spoken.add(String.join(" ", words));
+								words.removeFirst();
+							}
+							commandSpoken(spoken);
+						}
+					}
+				} catch (RuntimeException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	@Override
 	public void run() {
-		try {
-			for (String str = stdOut.readLine(); str != null; str = stdOut.readLine()) {
-				log.debug("PocketSphinx says: " + str);
-				if (str.startsWith("Final:"))
-					commandSpoken(str.substring(6));
-			}
-		} catch (IOException e) {
-			log.warn("Exception while listening", e);
-		}
-		log.debug("Not listening anymore");
 	}
 
 	@Override
 	public void startRecognition() {
-		log.debug("Starting SphinxRecognizer");
+		log.debug("Starting PocketSphinxRecognizer");
 		thread = new Thread(this);
 		thread.start();
-		thread2 = new Thread(() -> {
-			while (!Thread.interrupted()) {
-				try {
-					Thread.sleep(5000);
-				} catch (InterruptedException e1) {
-					break;
-				}
-				synchronized (stdIn) {
-					try {
-						stdIn.write("Keep alive");
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		});
-		thread2.start();
+		pipeline.play();
 	}
 
 	@Override
 	public void stopRecognition() {
-		log.debug("Stopping SphinxRecognizer");
-		thread2.interrupt();
-		thread2 = null;
-		synchronized (stdIn) {
-			try {
-				stdIn.write("Quit");
-			} catch (IOException e) {
-			}
-		}
-		process.destroy();
-		try {
-			process.waitFor();
-		} catch (InterruptedException e) {
-			process.destroyForcibly(); // Just to make sure
-		}
+		log.debug("Stopping PocketSphinxRecognizer");
+		pipeline.pause();
 		thread.interrupt();
 		thread = null;
 	}
@@ -104,16 +91,17 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 	@Override
 	public void deafenRecognition(boolean deaf) {
 		super.deafenRecognition(deaf);
-		synchronized (stdIn) {
-			try {
-				stdIn.write(deaf ? "Play" : "Pause");
-			} catch (IOException e) {
-			}
-		}
+		if (!isRunning())
+			return;
+		if (deaf)
+			pipeline.pause();
+		else
+			pipeline.play();
 	}
 
 	@Override
 	public void unload() {
-		// stt = null;
+		pipeline.stop();
+		Gst.deinit();
 	}
 }

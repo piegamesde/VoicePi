@@ -28,46 +28,39 @@ public class InterruptibleInputStream extends InputStream {
 	 */
 	@Override
 	public int read(byte b[], int off, int len) throws IOException {
-		System.out.println(len);
+		if (b == null) {
+			throw new NullPointerException();
+		} else if (off < 0 || len < 0 || len > b.length - off) {
+			throw new IndexOutOfBoundsException();
+		} else if (len == 0) {
+			return 0;
+		}
+		int c = -1;
 		while (!Thread.interrupted())
-			if (in.available() >= len)
-				return in.read(b, off, len);
-			else
+			if (in.available() > 0) {
+				c = in.read();
+				break;
+			} else
 				Thread.yield();
-		return -1;
-		// if (b == null) {
-		// throw new NullPointerException();
-		// } else if (off < 0 || len < 0 || len > b.length - off) {
-		// throw new IndexOutOfBoundsException();
-		// } else if (len == 0) {
-		// return 0;
-		// }
-		// int c = -1;
-		// while (!Thread.interrupted())
-		// if (in.available() > 0) {
-		// c = in.read();
-		// break;
-		// } else
-		// Thread.yield();
-		// if (c == -1) {
-		// return -1;
-		// }
-		// b[off] = (byte) c;
-		//
-		// int i = 1;
-		// try {
-		// for (; i < len; i++) {
-		// c = -1;
-		// if (in.available() > 0)
-		// c = in.read();
-		// if (c == -1) {
-		// break;
-		// }
-		// b[off + i] = (byte) c;
-		// }
-		// } catch (IOException ee) {
-		// }
-		// return i;
+		if (c == -1) {
+			return -1;
+		}
+		b[off] = (byte) c;
+
+		int i = 1;
+		try {
+			for (; i < len; i++) {
+				c = -1;
+				if (in.available() > 0)
+					c = in.read();
+				if (c == -1) {
+					break;
+				}
+				b[off + i] = (byte) c;
+			}
+		} catch (IOException ee) {
+		}
+		return i;
 	}
 
 	@Override

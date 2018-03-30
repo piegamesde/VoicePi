@@ -105,6 +105,7 @@ public class VoicePi implements Runnable {
 	public void onCommandSpoken(Collection<String> possibleCommand) {
 		log.debug("You might have said: " + Arrays.toString(possibleCommand.toArray()));
 		Module responsible = null;
+		boolean initialActivation = stateMachine.isWaitingForActivation();
 		ContextState initialState = stateMachine.getCurrentState();
 		String command = null;
 		for (String s : possibleCommand) {
@@ -122,7 +123,7 @@ public class VoicePi implements Runnable {
 			}
 		}
 		ContextState state = stateMachine.getCurrentState();
-		if (stateMachine.isActivationNeeded() && state == stateMachine.getRoot()) {
+		if (initialActivation && state == stateMachine.getRoot()) {
 			log.info("Activated.");
 			stt.deafenRecognition(true);
 			settings.onActivation.execute(this, log, "onActivation");
@@ -192,11 +193,6 @@ public class VoicePi implements Runnable {
 		// Initialize state machine
 		stateMachine = new VoiceState();
 		stateMachine.setActivationCommands(settings.activationCommands);
-
-		// stateMachine.setActivationCommands(
-		// StreamSupport.stream(config.getConfig().getAsJsonArray("activation-commands").spliterator(), false)
-		// .map(m -> m.getAsString())
-		// .collect(Collectors.toSet()));
 
 		modules.putAll(Optional.ofNullable(config.getModules()).orElse(config.loadModulesFromConfig(this)));
 		modules.forEach((name, module) -> {
