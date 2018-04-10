@@ -3,14 +3,11 @@ package de.piegames.voicepi.module;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import com.google.common.graph.MutableValueGraph;
-import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
-import de.piegames.voicepi.state.CommandSet;
 import de.piegames.voicepi.state.ContextState;
 
-public class ApplicationModule extends Module {
+public class ApplicationModule extends SimpleModule {
 
 	private Set<String> exit = new HashSet<>(), reload = new HashSet<>();
 	// Other possible commands: pause/resume, mute/unmute, ...
@@ -29,14 +26,11 @@ public class ApplicationModule extends Module {
 	}
 
 	@Override
-	public MutableValueGraph<ContextState, CommandSet> listCommands(ContextState root) {
-		MutableValueGraph<ContextState, CommandSet> ret = ValueGraphBuilder.directed().build();
+	public Set<String> listCommands() {
 		Set<String> commands = new HashSet<>();
 		commands.addAll(exit);
 		commands.addAll(reload);
-		ContextState node = new ContextState(name, "end");
-		ret.putEdgeValue(root, node, new CommandSet(this, commands));
-		return ret;
+		return commands;
 	}
 
 	@Override
