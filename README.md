@@ -28,12 +28,15 @@ Both alternatives are written in Python. Jasper has support for a lot more diffe
 ## Features to come
 
 - Support for more STT and TTS engines, especially the online ones from the big players (Google, Amazon, etc.). Technically you can already configure it, but it hasn't been tested yet.
+- Support for unlimited vocabulary and grammar
+- Support for Jasper modules
+- Support for Blather config files
 - Mixing STT and TTS engines. This will allow for using multiple input and output sources and even switch between them depending on the context: Sphinx for the activation command, Google for the rest. (WIP)
 - More examples, more pre-configured things for you to plug in. On the list: More music systems (Spotify, Gnome-music, ...)
 - Control through the command line (WIP)
 - A proper log system
 - Passive modules which monitor things in the background and activate themselves if something happens. This is a cool feature Jasper has and VoicePi should get it too one day. (WIP)
-- Make it less resource intensive and run faster on the Raspberry Pi
+- Make it less resource intensive and run faster on the Raspberry Pi (WIP)
 
 ## Contributing
 
