@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.LineUnavailableException;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 import edu.cmu.sphinx.api.Configuration;
@@ -35,7 +36,7 @@ public class SphinxRecognizer2 extends SphinxBaseRecognizer {
 		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
 		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
-		stt = new LiveSpeechRecognizer2(sphinxConfig, format);
+		stt = new LiveSpeechRecognizer2(sphinxConfig, control.getAudioIn());
 	}
 
 	@Override
@@ -57,7 +58,11 @@ public class SphinxRecognizer2 extends SphinxBaseRecognizer {
 	@Override
 	public void startRecognition() {
 		log.debug("Starting SphinxRecognizer");
-		stt.startRecognition(true);
+		try {
+			stt.startRecognition(true);
+		} catch (LineUnavailableException e) {
+			e.printStackTrace();
+		}
 		thread = new Thread(this);
 		thread.start();
 	}
@@ -72,7 +77,7 @@ public class SphinxRecognizer2 extends SphinxBaseRecognizer {
 		Thread.yield();
 		try {
 			stt.stopRecognition();
-		} catch (IllegalStateException e) {
+		} catch (IllegalStateException | IOException e) {
 			log.error("Could not stop voice recognition", e);
 		}
 		thread = null;

@@ -51,9 +51,8 @@ public abstract class AudioIn {
 		public AudioInputStream normalListening() throws LineUnavailableException {
 			TargetDataLine line = (TargetDataLine) AudioSystem.getLine(new DataLine.Info(TargetDataLine.class, format));
 			line.open(format);
-			line.start(); // start capturing
-			AudioInputStream stream = new AudioInputStream(line);
-			return stream;
+			line.start();
+			return new AudioInputStream(line);
 		}
 
 		@Override

@@ -5,45 +5,45 @@
 
 package de.piegames.voicepi.stt;
 
+import java.io.IOException;
 import java.io.InputStream;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.TargetDataLine;
+import de.piegames.voicepi.audio.AudioIn;
 
 /**
  * InputStream adapter
  */
 public class Microphone2 {
 
-	private final TargetDataLine	line;
-	private final InputStream		inputStream;
+	// private final TargetDataLine line;
+	private final InputStream inputStream;
 
-	public Microphone2(AudioFormat format) {
+	public Microphone2(AudioIn in) {
 		try {
-			line = AudioSystem.getTargetDataLine(format);
-			line.open(format);
+			// line = AudioSystem.getTargetDataLine(format);
+			// line.open(format);
+			inputStream = in.normalListening();
 		} catch (LineUnavailableException e) {
 			throw new IllegalStateException(e);
 		}
-		// inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(new InterruptibleInputStream(new
-		// AudioInputStream(line)), format, format.getFrameSize()));
-		inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(line));
+		// // inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(new InterruptibleInputStream(new
+		// // AudioInputStream(line)), format, format.getFrameSize()));
+		// inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(line));
 	}
 
 	public void startRecording() {
-		line.start();
+		// line.start();
 	}
 
 	public void stopRecording() {
-		line.stop();
+		// line.stop();
 	}
-	
+
 	public void close() {
 		try {
-			line.close();
-		} catch (SecurityException e) {
+			inputStream.close();
+			// line.close();
+		} catch (SecurityException | IOException e) {
 			e.printStackTrace();
 		}
 	}
