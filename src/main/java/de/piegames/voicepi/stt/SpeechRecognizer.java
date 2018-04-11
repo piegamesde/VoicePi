@@ -7,13 +7,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import javafx.beans.value.ChangeListener;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.state.ContextState;
+import javafx.beans.value.ChangeListener;
 
 public abstract class SpeechRecognizer implements Runnable {
 
@@ -94,7 +94,11 @@ public abstract class SpeechRecognizer implements Runnable {
 	 * seconds.<br/>
 	 * This does not have to be implemented if the module is always listening for commands anyway.
 	 */
-	protected void activeListening(int timout) {
+	public void activeListening(int timeout) {
+
+	}
+
+	public void passiveListening() {
 
 	}
 
