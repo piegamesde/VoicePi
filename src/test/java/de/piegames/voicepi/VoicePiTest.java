@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +45,11 @@ public class VoicePiTest {
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		stt.commandSpoken("TEST");
 		assertEquals("OK", tts.spoken.poll(timeout, TimeUnit.SECONDS));
-		assertEquals("Hello world", tts.spoken.poll(timeout, TimeUnit.SECONDS));
+		if(SystemUtils.IS_OS_LINUX) {
+			assertEquals("Hello world", tts.spoken.poll(timeout, TimeUnit.SECONDS));
+		} else {
+			tts.spoken.poll(timeout, TimeUnit.SECONDS);
+		}
 		stt.commandSpoken("ACTIVATE");
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 		Thread.sleep(5000);
