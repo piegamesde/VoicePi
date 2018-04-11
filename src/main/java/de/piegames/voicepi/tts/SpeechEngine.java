@@ -3,12 +3,8 @@ package de.piegames.voicepi.tts;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonElement;
@@ -46,26 +42,11 @@ public abstract class SpeechEngine {
 		if (ais == null)
 			return false;
 		try {
-			playSound(ais);
+			control.getAudioOut().play(ais);
 			return true;
 		} catch (IOException | LineUnavailableException e) {
 			log.warn("Could not speak text: ", e);
 			return false;
 		}
-	}
-
-	public static void playSound(AudioInputStream ais) throws LineUnavailableException, IOException {
-		AudioFormat audioFormat = ais.getFormat();
-		SourceDataLine line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(SourceDataLine.class, audioFormat));
-		line.open(audioFormat);
-		line.start();
-
-		int count = 0;
-		byte[] data = new byte[65532];
-		while ((count = ais.read(data)) != -1)
-			line.write(data, 0, count);
-
-		line.drain();
-		line.close();
 	}
 }

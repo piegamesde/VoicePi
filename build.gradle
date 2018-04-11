@@ -1,6 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'distribution'
+apply plugin: 'eclipse'
 
 group = 'de.piegames'
 version = '0.2.1'

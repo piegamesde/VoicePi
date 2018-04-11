@@ -25,6 +25,8 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import de.piegames.voicepi.action.Action;
 import de.piegames.voicepi.action.Action.ActionType;
+import de.piegames.voicepi.audio.AudioIn;
+import de.piegames.voicepi.audio.AudioOut;
 import de.piegames.voicepi.module.Module;
 import de.piegames.voicepi.state.CommandSet;
 import de.piegames.voicepi.state.ContextState;
@@ -46,6 +48,8 @@ public class VoicePi implements Runnable {
 	protected SpeechEngine						tts;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected SpeechRecognizer					stt;
+	protected AudioIn							in				= null;								// TODO
+	protected AudioOut							out				= new AudioOut.DefaultOut();		// TODO
 	protected Map<String, Module>				modules			= new HashMap<>();
 	protected Settings							settings		= new Settings();
 	protected final Queue<ContextState>			notifications	= new SynchronousQueue<>();
@@ -257,6 +261,14 @@ public class VoicePi implements Runnable {
 
 	public SpeechRecognizer getSTT() {
 		return stt;
+	}
+
+	public AudioIn getAudioIn() {
+		return in;
+	}
+
+	public AudioOut getAudioOut() {
+		return out;
 	}
 
 	public ContextState getCurrentState() {
