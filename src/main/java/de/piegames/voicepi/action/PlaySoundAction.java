@@ -21,7 +21,7 @@ public class PlaySoundAction extends Action {
 	public void execute(VoicePi control) throws IOException, InterruptedException {
 		try {
 			log.debug("Playing " + soundfile);
-			control.getAudioOut().play(AudioSystem.getAudioInputStream(new File(soundfile)));
+			control.getAudio().play(AudioSystem.getAudioInputStream(new File(soundfile)));
 		} catch (LineUnavailableException | UnsupportedAudioFileException e) {
 			log.warn("Could not play sound " + soundfile, e);
 		}
