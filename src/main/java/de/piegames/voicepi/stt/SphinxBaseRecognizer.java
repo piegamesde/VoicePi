@@ -24,6 +24,8 @@ import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+
 import de.piegames.voicepi.CommandsCache;
 import de.piegames.voicepi.CommandsCache.CacheElement;
 import de.piegames.voicepi.VoicePi;
@@ -43,7 +45,10 @@ public abstract class SphinxBaseRecognizer extends SpeechRecognizer {
 		// Check cache
 		CommandsCache cache = new CommandsCache(Paths.get("cache.json"));
 		cache.loadFromCache();
-		int cacheSize = config.getAsJsonPrimitive("corpus-history-size").getAsInt();
+		int cacheSize = 10;
+		JsonPrimitive jp = config.getAsJsonPrimitive("corpus-history-size");
+		if (jp != null)
+			cacheSize = config.getAsJsonPrimitive("corpus-history-size").getAsInt();
 		lmPath = Files.createTempFile("voicepi-cached-", ".lm");
 		dicPath = Files.createTempFile("voicepi-cached-", ".dic");
 		Path corpusPath = Files.createTempFile("voicepi-cached-", ".corpus");
