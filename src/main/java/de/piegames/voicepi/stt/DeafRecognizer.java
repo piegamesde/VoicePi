@@ -2,12 +2,14 @@ package de.piegames.voicepi.stt;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 
-public class DeafRecognizer extends SpeechRecognizer {
+public class DeafRecognizer extends SpeechRecognizer implements SpeechTranscriber {
 
 	public DeafRecognizer(VoicePi control) {
 		this(control, null);
@@ -29,12 +31,10 @@ public class DeafRecognizer extends SpeechRecognizer {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		// try {
-		// throw new InternalError("FIXME: This has to be implemented");
-		// This does not work and is buggy
-		// new Object().wait();
-		// } catch (InterruptedException e) {
-		// return;
-		// }
+	}
+
+	@Override
+	public List<String> transcribe(int timeout) {
+		return Collections.emptyList();
 	}
 }

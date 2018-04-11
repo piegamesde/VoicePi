@@ -7,13 +7,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import javax.swing.event.ChangeListener;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.state.ContextState;
-import javafx.beans.value.ChangeListener;
 
 public abstract class SpeechRecognizer implements Runnable {
 
@@ -89,6 +89,16 @@ public abstract class SpeechRecognizer implements Runnable {
 	}
 
 	/**
+	 * This is called to tell the recognizer that it should start recording and listening for commands actively instead of just waiting passively. This method
+	 * will only be called while listening and should return immediately. Listening should stop after a command has been spoken or after {@code timeout}
+	 * seconds.<br/>
+	 * This does not have to be implemented if the module is always listening for commands anyway.
+	 */
+	protected void activeListening(int timout) {
+
+	}
+
+	/**
 	 * This will stop the recognizer from listening. The recognizer will not "hear" anything until {@code #undeafenRecognition()} is called. This is to prevent
 	 * recording the output of the speech synthesis as command again. This should have no effect to those recognizers who don't rely on the microphone.
 	 */
@@ -97,7 +107,7 @@ public abstract class SpeechRecognizer implements Runnable {
 		this.deaf = deaf;
 	}
 
-	/** Unloads and releases all resources. The object won't be used after this method being called. */
+	/** Unloads and releases all resources. The object won't be used after this method has been called. */
 	public void unload() {
 		commandsSpoken = null;
 	}
