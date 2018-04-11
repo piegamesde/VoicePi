@@ -23,7 +23,7 @@ public class Microphone2 {
 			// line = AudioSystem.getTargetDataLine(format);
 			// line.open(format);
 			inputStream = in.normalListening();
-		} catch (LineUnavailableException e) {
+		} catch (LineUnavailableException | IOException e) {
 			throw new IllegalStateException(e);
 		}
 		// // inputStream = AudioSystem.getAudioInputStream(new AudioFormat(16000, 16, 1, true, false), new AudioInputStream(new InterruptibleInputStream(new

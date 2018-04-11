@@ -1,6 +1,9 @@
 package de.piegames.voicepi.audio;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.FloatBuffer;
 import java.util.EnumSet;
 import java.util.LinkedList;
@@ -23,6 +26,7 @@ import org.jaudiolibs.jnajack.JackPort;
 import org.jaudiolibs.jnajack.JackPortFlags;
 import org.jaudiolibs.jnajack.JackPortType;
 import org.jaudiolibs.jnajack.JackProcessCallback;
+import org.jaudiolibs.jnajack.JackSampleRateCallback;
 import org.jaudiolibs.jnajack.JackStatus;
 
 public abstract class Audio {
@@ -37,15 +41,20 @@ public abstract class Audio {
 		volume = new VolumeSpeechDetector(100, 500);
 	}
 
-	/** This will start listening until the returned {@code AudioInputStream} is closed */
-	public abstract AudioInputStream normalListening() throws LineUnavailableException;
+	/**
+	 * This will start listening until the returned {@code AudioInputStream} is closed
+	 *
+	 * @throws IOException
+	 */
+	public abstract AudioInputStream normalListening() throws LineUnavailableException, IOException;
 
 	/**
 	 * This will start listening until a command was spoken or {@code timeout} seconds passed
 	 *
 	 * @throws LineUnavailableException
+	 * @throws IOException
 	 */
-	public abstract AudioInputStream activeListening(int timeout) throws LineUnavailableException;
+	public abstract AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException;
 
 	/**
 	 * This will wait until a command gets spoken, then return and automatically stop listening once the command is over
@@ -55,7 +64,7 @@ public abstract class Audio {
 	 */
 	public abstract AudioInputStream passiveListening() throws LineUnavailableException, IOException;
 
-	public abstract void play(AudioInputStream stream) throws LineUnavailableException, IOException;
+	public abstract void play(AudioInputStream stream) throws LineUnavailableException, IOException, InterruptedException;
 
 	public void init() throws JackException {
 	}
@@ -116,12 +125,13 @@ public abstract class Audio {
 		}
 	}
 
-	public static class JackAudio extends Audio {
+	public static class JackAudio extends Audio implements JackProcessCallback, JackSampleRateCallback {
 
 		protected JackClient				client;
 		protected JackPort					out, in;
 		protected int						sampleRate;
 		protected Queue<AudioInputStream>	outQueue	= new LinkedList<>();
+		protected Queue<OutputStream>		inQueue		= new LinkedList<>();
 
 		public JackAudio(AudioFormat format) {
 			super(format);
@@ -132,52 +142,10 @@ public abstract class Audio {
 			Jack jack = Jack.getInstance();
 			client = jack.openClient("VoicePi", EnumSet.noneOf(JackOptions.class), EnumSet.noneOf(JackStatus.class));
 			sampleRate = client.getSampleRate();
-			System.out.println(sampleRate);
 			in = client.registerPort("in", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsInput));
 			out = client.registerPort("out", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsOutput));
-			client.setSampleRateCallback((client, sampleRate) -> {
-				if (client == JackAudio.this.client)
-					JackAudio.this.sampleRate = sampleRate;
-			});
-			client.setProcessCallback(new JackProcessCallback() {
-
-				@Override
-				public boolean process(JackClient client, int samples) {
-					// Process out
-					if (!outQueue.isEmpty()) {
-						FloatBuffer out = JackAudio.this.out.getFloatBuffer();
-						try {
-							AudioInputStream stream = outQueue.peek();
-							byte[] buffer = new byte[samples * 2];
-							int position = 0;
-							while (position < samples * 2) {
-								int read = stream.read(buffer, position, samples * 2 - position);
-								for (int i = position; i < position + read;) {
-									int sample = 0;
-									sample |= buffer[i++] & 0xFF; // (reverse these two lines
-									sample |= buffer[i++] << 8; // if the format is big endian)
-									out.put(sample / 32768f);
-								}
-								position += read;
-								if (read < samples * 2) {
-									stream.close();
-									outQueue.poll();
-									if (outQueue.isEmpty())
-										break;
-									stream = outQueue.peek();
-								}
-							}
-						} catch (IOException e) {
-							// TODO exception handling
-							e.printStackTrace();
-						}
-					}
-					{// Process in
-
-					}
-					return true;
-				}
-			});
+			client.setSampleRateCallback(this);
+			client.setProcessCallback(this);
 			client.activate();
 			client.transportStart();
 		}
@@ -186,31 +154,118 @@ public abstract class Audio {
 		public void close() throws JackException, IOException {
 			client.transportStop();
 			client.deactivate();
-			for (AudioInputStream in : outQueue)
-				in.close();
-			outQueue.clear();
+			synchronized (outQueue) {
+				for (AudioInputStream in : outQueue)
+					in.close();
+				outQueue.clear();
+			}
 		}
 
 		@Override
-		public AudioInputStream normalListening() throws LineUnavailableException {
+		public AudioInputStream normalListening() throws LineUnavailableException, IOException {
+			PipedOutputStream pout = new PipedOutputStream();
+			PipedInputStream pin = new PipedInputStream(pout, 1024 * 16);
+			inQueue.add(pout);
+			AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
+			AudioInputStream audio = new AudioInputStream(pin, format, AudioSystem.NOT_SPECIFIED);
+
+			// AudioSystem.write(audio, Type.WAVE, new File("test.wav"));
+			// try {
+			// play(audio);
+			// } catch (InterruptedException e) {
+			// e.printStackTrace();
+			// }
 			return null;
 		}
 
 		@Override
-		public AudioInputStream activeListening(int timeout) {
-			return null;
+		public AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
+			return new ClosingAudioInputStream(normalListening(),
+					Audio.PCM_FORMAT,
+					AudioSystem.NOT_SPECIFIED,
+					volume);
 		}
 
 		@Override
-		public AudioInputStream passiveListening() {
-			return null;
+		public AudioInputStream passiveListening() throws LineUnavailableException, IOException {
+			AudioInputStream stream = formatStream(normalListening());
+			ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume);
+			byte[] buffer = new byte[1024];
+			while (wait.read(buffer) != -1)
+				;
+			wait.close();// Actually not needed
+			volume.startSpeaking();
+			return new ClosingAudioInputStream(stream, PCM_FORMAT, AudioSystem.NOT_SPECIFIED, volume);
 		}
 
 		@Override
-		public void play(AudioInputStream stream) {
+		public void play(AudioInputStream stream) throws InterruptedException {
 			// stream = formatStream(stream);
-			outQueue.add(stream);
+			synchronized (outQueue) {
+				outQueue.add(stream);
+			}
 			// TODO this won't wait but it should
+		}
+
+		@Override
+		public boolean process(JackClient client, int samples) {
+			// Process out
+			synchronized (outQueue) {
+				if (!outQueue.isEmpty()) {
+					FloatBuffer outData = out.getFloatBuffer();
+					try {
+						AudioInputStream stream = outQueue.peek();
+						byte[] buffer = new byte[samples * 2];
+						int position = 0;
+						while (position < samples * 2) {
+							int read = stream.read(buffer, position, samples * 2 - position);
+							for (int i = position; i < position + read;) {
+								int sample = 0;
+								sample |= buffer[i++] & 0xFF; // (reverse these two lines
+								sample |= buffer[i++] << 8; // if the format is big endian)
+								outData.put(sample / 32768f);
+							}
+							position += read;
+							if (read < samples * 2) {
+								stream.close();
+								outQueue.poll();
+								if (outQueue.isEmpty())
+									break;
+								stream = outQueue.peek();
+							}
+						}
+					} catch (IOException e) {
+						// TODO exception handling
+						e.printStackTrace();
+					}
+				}
+			}
+			{// Process in
+				FloatBuffer inData = in.getFloatBuffer();
+				byte[] buffer = new byte[inData.capacity() * 2];
+				for (int i = 0; i < inData.capacity(); i++) {
+					int sample = Math.round(inData.get(i) * 32767);
+					buffer[i * 2] = (byte) sample;
+					buffer[i * 2 + 1] = (byte) (sample >> 8);
+				}
+
+				inQueue.removeIf(out -> {
+					try {
+						out.write(buffer, 0, buffer.length);
+					} catch (IOException e) {
+						e.printStackTrace();
+						return true;
+					}
+					return false;
+				});
+			}
+			return true;
+		}
+
+		@Override
+		public void sampleRateChanged(JackClient client, int sampleRate) {
+			if (client == JackAudio.this.client)
+				this.sampleRate = sampleRate;
 		}
 	}
 

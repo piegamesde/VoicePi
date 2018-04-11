@@ -40,9 +40,10 @@ public class LiveSpeechRecognizer2 extends AbstractSpeechRecognizer {
 	 *
 	 * @param clear clear cached microphone data
 	 * @throws LineUnavailableException
+	 * @throws IOException
 	 * @see LiveSpeechRecognizer2#stopRecognition()
 	 */
-	public void startRecognition(boolean clear) throws LineUnavailableException {
+	public void startRecognition(boolean clear) throws LineUnavailableException, IOException {
 		inputStream = in.normalListening();
 		// inputStream = new DebugAudioInputStream(inputStream, inputStream.getFormat(), AudioSystem.NOT_SPECIFIED);
 		context.getInstance(StreamDataSource.class)
