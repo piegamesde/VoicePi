@@ -39,6 +39,14 @@ public class Microphone2 {
 	public void stopRecording() {
 		line.stop();
 	}
+	
+	public void close() {
+		try {
+			line.close();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public InputStream getStream() {
 		return inputStream;
