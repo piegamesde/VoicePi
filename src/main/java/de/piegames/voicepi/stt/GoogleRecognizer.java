@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -24,6 +25,7 @@ import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import de.piegames.voicepi.VoicePi;
+import edu.cmu.sphinx.api.SpeechResult;
 
 public class GoogleRecognizer extends SphinxBaseRecognizer {
 
@@ -38,32 +40,39 @@ public class GoogleRecognizer extends SphinxBaseRecognizer {
 
 	@Override
 	public void run() {
-		try {
-			AudioFormat format = new AudioFormat(8000, 16, 1, true, false);
-			DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-			TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
-			line.open(format);
-			line.start(); // start capturing
-			AudioInputStream stream = new AudioInputStream(line);
-			new Thread(() -> {
-				try {
-					Thread.sleep(5000);
-					stream.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}).start();
-
-			// ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			AudioSystem.write(stream, AudioFileFormat.Type.WAVE, new File("test2.wav"));
-			// AudioSystem.write(stream, AudioFileFormat.Type.WAVE, outputStream);
-			// byte[] fileData = outputStream.toByteArray();
-			// Files.write(Paths.get("test.wav"), fileData);
-			// syncRecognizeFile(fileData);
-			syncRecognizeFile(Files.readAllBytes(Paths.get("test2.wav")));
-		} catch (Exception e) {
-			e.printStackTrace();
+		while (!Thread.currentThread().isInterrupted()) {
+			log.debug("Listening");
+			try {
+				AudioFormat format = new AudioFormat(8000, 16, 1, true, false);
+				DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
+				TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
+				line.open(format);
+				line.start(); // start capturing
+				AudioInputStream stream = new AudioInputStream(line);
+				new Thread(() -> {
+					try {
+						Thread.sleep(5000);
+						stream.close();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}).start();
+				
+				// ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+				AudioSystem.write(stream, AudioFileFormat.Type.WAVE, new File("test2.wav"));
+				line.stop();
+				line.close();
+				// AudioSystem.write(stream, AudioFileFormat.Type.WAVE, outputStream);
+				// byte[] fileData = outputStream.toByteArray();
+				// Files.write(Paths.get("test.wav"), fileData);
+				// syncRecognizeFile(fileData);
+				syncRecognizeFile(Files.readAllBytes(Paths.get("test2.wav")));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
+		log.debug("Not listening anymore");
+		
 	}
 
 	@Override
@@ -92,16 +101,16 @@ public class GoogleRecognizer extends SphinxBaseRecognizer {
 
 	}
 
-	public static void syncRecognizeFile(byte[] data) throws Exception, IOException {
+	public void syncRecognizeFile(byte[] data) throws Exception, IOException {
 		SpeechClient speech = SpeechClient.create();
-
+		
 		ByteString audioBytes = ByteString.copyFrom(data);
 
 		// Configure request with local raw PCM audio
 		RecognitionConfig config = RecognitionConfig.newBuilder()
 				.setEncoding(AudioEncoding.LINEAR16)
-				.setLanguageCode("en-US")
-				.setSampleRateHertz(16000)
+				.setLanguageCode("de-DE")
+				.setSampleRateHertz(8000)
 				.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()
 				.setContent(audioBytes)
@@ -110,13 +119,14 @@ public class GoogleRecognizer extends SphinxBaseRecognizer {
 		// Use blocking call to get audio transcript
 		RecognizeResponse response = speech.recognize(config, audio);
 		List<SpeechRecognitionResult> results = response.getResultsList();
-
+		ArrayList<String> strres = new ArrayList<String>();
 		for (SpeechRecognitionResult result : results) {
 			// There can be several alternative transcripts for a given chunk of speech. Just use the
 			// first (most likely) one here.
 			SpeechRecognitionAlternative alternative = result.getAlternativesList().get(0);
-			System.out.printf("Transcription: %s%n", alternative.getTranscript());
+			strres.add(alternative.getTranscript().toUpperCase());
 		}
+		this.commandsSpoken.offer(strres);
 		speech.close();
 	}
 }
