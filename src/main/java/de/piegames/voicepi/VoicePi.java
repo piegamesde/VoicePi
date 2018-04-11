@@ -47,7 +47,7 @@ public class VoicePi implements Runnable {
 	protected SpeechEngine						tts;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected SpeechRecognizer					stt;
-	protected Audio								audio			= new Audio.DefaultAudio(Audio.PCM_FORMAT);	// TODO
+	protected Audio								audio			= new Audio.DefaultAudio(Audio.FORMAT);	// TODO
 	protected Map<String, Module>				modules			= new HashMap<>();
 	protected Settings							settings		= new Settings();
 	protected final Queue<ContextState>			notifications	= new SynchronousQueue<>();
@@ -73,6 +73,10 @@ public class VoicePi implements Runnable {
 					log.info("Push notification incoming: " + state);
 					stateMachine.current.set(state);
 				}
+				if (stateMachine.isWaitingForActivation())
+					stt.passiveListening();
+				else
+					stt.activeListening(settings.timeout);
 				Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
 				if (spoken != null) {
 					onCommandSpoken(spoken);

@@ -31,10 +31,15 @@ import org.jaudiolibs.jnajack.JackStatus;
 
 public abstract class Audio {
 
-	public static final AudioFormat	PCM_FORMAT	= new AudioFormat(16000, 16, 1, true, false);
+	/** The default format. It will be used for all audio processing and if possible for audio recording. */
+	public static final AudioFormat	FORMAT	= new AudioFormat(16000, 16, 1, true, false);
 
 	protected AudioFormat			format;
 	protected VolumeSpeechDetector	volume;
+
+	public Audio() {
+		this(FORMAT);
+	}
 
 	public Audio(AudioFormat format) {
 		this.format = Objects.requireNonNull(format);
@@ -55,6 +60,14 @@ public abstract class Audio {
 	 * @throws IOException
 	 */
 	public abstract AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException;
+
+	/**
+	 * This will start listening until a command was spoken or {@code timeout} seconds passed and return the recorded data.
+	 *
+	 * @throws LineUnavailableException
+	 * @throws IOException
+	 */
+	// public abstract byte[] activeListeningRaw(int timeout) throws LineUnavailableException, IOException;
 
 	/**
 	 * This will wait until a command gets spoken, then return and automatically stop listening once the command is over
@@ -83,15 +96,16 @@ public abstract class Audio {
 			TargetDataLine line = (TargetDataLine) AudioSystem.getLine(new DataLine.Info(TargetDataLine.class, format));
 			line.open(format);
 			line.start(); // start capturing
-			AudioInputStream stream = new DebugAudioInputStream(new AudioInputStream(line), format, AudioSystem.NOT_SPECIFIED);
+			AudioInputStream stream = new AudioInputStream(line);
+			stream = formatStream(stream);
 			return stream;
 		}
 
 		@Override
 		public AudioInputStream activeListening(int timeout) throws LineUnavailableException {
 			return new ClosingAudioInputStream(
-					AudioSystem.getAudioInputStream(Encoding.PCM_SIGNED, AudioSystem.getAudioInputStream(PCM_FORMAT, normalListening())),
-					Audio.PCM_FORMAT,
+					AudioSystem.getAudioInputStream(Encoding.PCM_SIGNED, AudioSystem.getAudioInputStream(FORMAT, normalListening())),
+					Audio.FORMAT,
 					AudioSystem.NOT_SPECIFIED,
 					volume);
 		}
@@ -99,13 +113,13 @@ public abstract class Audio {
 		@Override
 		public AudioInputStream passiveListening() throws LineUnavailableException, IOException {
 			AudioInputStream stream = formatStream(normalListening());
-			ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), PCM_FORMAT, AudioSystem.NOT_SPECIFIED, volume);
+			ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), FORMAT, AudioSystem.NOT_SPECIFIED, volume);
 			byte[] buffer = new byte[1024];
 			while (wait.read(buffer) != -1)
 				;
 			wait.close();// Actually not needed
 			volume.startSpeaking();
-			return new ClosingAudioInputStream(stream, PCM_FORMAT, AudioSystem.NOT_SPECIFIED, volume);
+			return new ClosingAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume);
 		}
 
 		@Override
@@ -168,20 +182,14 @@ public abstract class Audio {
 			inQueue.add(pout);
 			AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
 			AudioInputStream audio = new AudioInputStream(pin, format, AudioSystem.NOT_SPECIFIED);
-
-			// AudioSystem.write(audio, Type.WAVE, new File("test.wav"));
-			// try {
-			// play(audio);
-			// } catch (InterruptedException e) {
-			// e.printStackTrace();
-			// }
-			return null;
+			audio = formatStream(audio);
+			return audio;
 		}
 
 		@Override
 		public AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
 			return new ClosingAudioInputStream(normalListening(),
-					Audio.PCM_FORMAT,
+					Audio.FORMAT,
 					AudioSystem.NOT_SPECIFIED,
 					volume);
 		}
@@ -195,7 +203,7 @@ public abstract class Audio {
 				;
 			wait.close();// Actually not needed
 			volume.startSpeaking();
-			return new ClosingAudioInputStream(stream, PCM_FORMAT, AudioSystem.NOT_SPECIFIED, volume);
+			return new ClosingAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume);
 		}
 
 		@Override
@@ -270,8 +278,8 @@ public abstract class Audio {
 	}
 
 	public static AudioInputStream formatStream(AudioInputStream in) {
-		// TODO only warp if the encoding/format is not matching
-		return AudioSystem.getAudioInputStream(PCM_FORMAT, AudioSystem.getAudioInputStream(Encoding.PCM_SIGNED, in));
-		// return AudioSystem.getAudioInputStream(PCM_FORMAT, in);
+		if (!in.getFormat().equals(FORMAT))
+			in = AudioSystem.getAudioInputStream(FORMAT, in);
+		return in;
 	}
 }

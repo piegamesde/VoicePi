@@ -44,7 +44,7 @@ public abstract class SpeechEngine {
 		try {
 			control.getAudio().play(ais);
 			return true;
-		} catch (IOException | LineUnavailableException e) {
+		} catch (IOException | LineUnavailableException | InterruptedException e) {
 			log.warn("Could not speak text: ", e);
 			return false;
 		}

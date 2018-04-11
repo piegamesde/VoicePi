@@ -60,7 +60,7 @@ public class SphinxRecognizer2 extends SphinxBaseRecognizer {
 		log.debug("Starting SphinxRecognizer");
 		try {
 			stt.startRecognition(true);
-		} catch (LineUnavailableException e) {
+		} catch (LineUnavailableException | IOException e) {
 			e.printStackTrace();
 		}
 		thread = new Thread(this);
