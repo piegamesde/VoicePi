@@ -16,11 +16,13 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
+import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import com.google.gson.JsonObject;
@@ -81,11 +83,12 @@ public abstract class SphinxBaseRecognizer extends SpeechRecognizer {
 			String baseName;
 			{
 				log.debug("The compiled models can be found at and will be downloaded from \"" + downloadURL + "\"");
-				// TODO make this work with Apache
-				// HttpGet get = new HttpGet(downloadURL);
-				// HttpResponse response = client.execute(get);
+				// TODO Catch possible exceptions for connection issues etc
+				HttpGet get = new HttpGet(downloadURL);
+				HttpResponse response = client.execute(get);
 				// log.debug("Response from the server: " + response.getStatusLine() + ", " + Arrays.toString(response.getAllHeaders()));
-				String text = IOUtils.toString(new URL(downloadURL), (Charset) null);
+				String text = new BasicResponseHandler().handleResponse(response);
+				// String text = IOUtils.toString(new URL(downloadURL), (Charset) null);
 				log.debug("The response from the server: " + text);
 				Pattern pattern = Pattern.compile("(<b>)(\\d*?)(</b>)");
 				Matcher m = pattern.matcher(text);
