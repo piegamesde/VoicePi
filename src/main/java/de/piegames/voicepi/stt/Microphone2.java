@@ -8,7 +8,7 @@ package de.piegames.voicepi.stt;
 import java.io.IOException;
 import java.io.InputStream;
 import javax.sound.sampled.LineUnavailableException;
-import de.piegames.voicepi.audio.AudioIn;
+import de.piegames.voicepi.audio.Audio;
 
 /**
  * InputStream adapter
@@ -18,7 +18,7 @@ public class Microphone2 {
 	// private final TargetDataLine line;
 	private final InputStream inputStream;
 
-	public Microphone2(AudioIn in) {
+	public Microphone2(Audio in) {
 		try {
 			// line = AudioSystem.getTargetDataLine(format);
 			// line.open(format);

@@ -36,7 +36,7 @@ public class SphinxRecognizer2 extends SphinxBaseRecognizer {
 		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
 		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
-		stt = new LiveSpeechRecognizer2(sphinxConfig, control.getAudioIn());
+		stt = new LiveSpeechRecognizer2(sphinxConfig, control.getAudio());
 	}
 
 	@Override

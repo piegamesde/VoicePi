@@ -42,7 +42,7 @@ public abstract class SpeechEngine {
 		if (ais == null)
 			return false;
 		try {
-			control.getAudioOut().play(ais);
+			control.getAudio().play(ais);
 			return true;
 		} catch (IOException | LineUnavailableException e) {
 			log.warn("Could not speak text: ", e);

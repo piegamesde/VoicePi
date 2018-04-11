@@ -7,10 +7,8 @@ package de.piegames.voicepi.stt;
 
 import java.io.IOException;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
-import de.piegames.voicepi.audio.AudioIn;
-import de.piegames.voicepi.audio.DebugAudioInputStream;
+import de.piegames.voicepi.audio.Audio;
 import edu.cmu.sphinx.api.AbstractSpeechRecognizer;
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.frontend.util.StreamDataSource;
@@ -21,7 +19,7 @@ import edu.cmu.sphinx.frontend.util.StreamDataSource;
 public class LiveSpeechRecognizer2 extends AbstractSpeechRecognizer {
 
 	// private final Microphone2 microphone;
-	private AudioIn				in;
+	private Audio				in;
 	private AudioInputStream	inputStream;
 
 	/**
@@ -30,7 +28,7 @@ public class LiveSpeechRecognizer2 extends AbstractSpeechRecognizer {
 	 * @param configuration common configuration
 	 * @throws IOException if model IO went wrong
 	 */
-	public LiveSpeechRecognizer2(Configuration configuration, AudioIn in) throws IOException {
+	public LiveSpeechRecognizer2(Configuration configuration, Audio in) throws IOException {
 		super(configuration);
 		// microphone = speechSourceProvider.getMicrophone();
 		// microphone = new Microphone2(in);
@@ -46,7 +44,7 @@ public class LiveSpeechRecognizer2 extends AbstractSpeechRecognizer {
 	 */
 	public void startRecognition(boolean clear) throws LineUnavailableException {
 		inputStream = in.normalListening();
-		inputStream = new DebugAudioInputStream(inputStream, inputStream.getFormat(), AudioSystem.NOT_SPECIFIED);
+		// inputStream = new DebugAudioInputStream(inputStream, inputStream.getFormat(), AudioSystem.NOT_SPECIFIED);
 		context.getInstance(StreamDataSource.class)
 				.setInputStream(inputStream);
 		recognizer.allocate();

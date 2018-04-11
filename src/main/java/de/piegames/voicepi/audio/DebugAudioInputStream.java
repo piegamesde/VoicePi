@@ -33,7 +33,6 @@ public class DebugAudioInputStream extends AudioInputStream {
 		int read = super.read(b, off, len);
 		if (read == -1)
 			return read;
-		line.write(b, off, read);
 		return read;
 	}
 
