@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import javax.swing.event.ChangeListener;
+import javafx.beans.value.ChangeListener;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonElement;
