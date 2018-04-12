@@ -89,7 +89,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 		// Configure request with local raw PCM audio
 		RecognitionConfig config = RecognitionConfig.newBuilder()
 				.setEncoding(AudioEncoding.LINEAR16)
-				.setLanguageCode("de-DE")
+				.setLanguageCode(control.getSettings().getLangCode())
 				.setSampleRateHertz(16000)
 				.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()

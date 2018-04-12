@@ -47,7 +47,7 @@ public class VoicePi implements Runnable {
 	protected SpeechEngine						tts;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected SpeechRecognizer					stt;
-	protected Audio								audio			= new Audio.JackAudio(Audio.FORMAT);	// TODO
+	protected Audio								audio			= new Audio.DefaultAudio(Audio.FORMAT);	// TODO
 	protected Map<String, Module>				modules			= new HashMap<>();
 	protected Settings							settings		= new Settings();
 	protected final Queue<ContextState>			notifications	= new SynchronousQueue<>();
