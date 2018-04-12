@@ -60,7 +60,8 @@ public abstract class Audio {
 	 * @throws LineUnavailableException
 	 * @throws IOException
 	 */
-	public AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
+	@Deprecated
+	protected AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
 		return new ClosingAudioInputStream(normalListening(),
 				Audio.FORMAT,
 				AudioSystem.NOT_SPECIFIED,
@@ -80,7 +81,7 @@ public abstract class Audio {
 	 * @throws LineUnavailableException
 	 * @throws IOException
 	 */
-	public AudioInputStream passiveListening() throws LineUnavailableException, IOException {
+	public AudioInputStream listenCommand() throws LineUnavailableException, IOException {
 		AudioInputStream stream = formatStream(normalListening());
 		ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume, true);
 		byte[] buffer = new byte[1024];

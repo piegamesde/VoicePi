@@ -31,21 +31,11 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	}
 
 	@Override
-	public void activeListening(int timeout) {
-
-	}
-
-	@Override
-	public void passiveListening() {
-
-	}
-
-	@Override
 	public void run() {
 		while (!Thread.currentThread().isInterrupted()) {
 			log.debug("Listening");
 			try {
-				byte[] fileData = Audio.readAllBytes(control.getAudio().activeListening(30));
+				byte[] fileData = Audio.readAllBytes(control.getAudio().listenCommand());
 				Files.write(Paths.get("test.wav"), fileData);
 				syncRecognizeFile(fileData);
 			} catch (Exception e) {
@@ -53,20 +43,6 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			}
 		}
 		log.debug("Not listening anymore");
-	}
-
-	@Override
-	public void startRecognition() {
-		log.debug("Starting Google Recognizer");
-		thread = new Thread(this);
-		thread.start();
-	}
-
-	@Override
-	public void stopRecognition() {
-		log.debug("Stopping Google Recognizer");
-		thread.interrupt();
-		thread = null;
 	}
 
 	@Override
@@ -82,7 +58,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	}
 
 	public void syncRecognizeFile(byte[] data) throws Exception, IOException {
-		SpeechClient speech = SpeechClient.create();
+		SpeechClient speech = SpeechClient.create(); // TODO reuse variable
 
 		ByteString audioBytes = ByteString.copyFrom(data);
 

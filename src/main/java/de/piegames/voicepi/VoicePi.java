@@ -73,10 +73,6 @@ public class VoicePi implements Runnable {
 					log.info("Push notification incoming: " + state);
 					stateMachine.current.set(state);
 				}
-				if (stateMachine.isWaitingForActivation())
-					stt.passiveListening();
-				else
-					stt.activeListening(settings.timeout);
 				Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
 				if (spoken != null) {
 					onCommandSpoken(spoken);

@@ -44,7 +44,6 @@ public class MultiRecognizer extends SpeechRecognizer {
 	public void run() {
 	}
 
-	@Override
 	public void onStateChanged(ContextState current) {
 		for (SpeechRecognizer r : recognizers) {
 			r.onStateChanged(current);
