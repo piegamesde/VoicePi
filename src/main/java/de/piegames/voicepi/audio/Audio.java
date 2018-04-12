@@ -1,5 +1,6 @@
 package de.piegames.voicepi.audio;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
@@ -28,6 +29,7 @@ import org.jaudiolibs.jnajack.JackPortType;
 import org.jaudiolibs.jnajack.JackProcessCallback;
 import org.jaudiolibs.jnajack.JackSampleRateCallback;
 import org.jaudiolibs.jnajack.JackStatus;
+import com.google.api.client.util.IOUtils;
 
 public abstract class Audio {
 
@@ -143,25 +145,32 @@ public abstract class Audio {
 
 		protected JackClient				client;
 		protected JackPort					out, in;
+		protected AudioFormat				format;
 		protected int						sampleRate;
 		protected Queue<AudioInputStream>	outQueue	= new LinkedList<>();
 		protected Queue<OutputStream>		inQueue		= new LinkedList<>();
 
 		public JackAudio(AudioFormat format) {
 			super(format);
+			try {// TODO remove
+				init();
+				Thread.sleep(10000);
+			} catch (JackException | InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 
 		@Override
 		public void init() throws JackException {
 			Jack jack = Jack.getInstance();
 			client = jack.openClient("VoicePi", EnumSet.noneOf(JackOptions.class), EnumSet.noneOf(JackStatus.class));
-			sampleRate = client.getSampleRate();
 			in = client.registerPort("in", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsInput));
 			out = client.registerPort("out", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsOutput));
 			client.setSampleRateCallback(this);
 			client.setProcessCallback(this);
 			client.activate();
 			client.transportStart();
+			sampleRateChanged(client, client.getSampleRate());
 		}
 
 		@Override
@@ -179,7 +188,9 @@ public abstract class Audio {
 		public AudioInputStream normalListening() throws LineUnavailableException, IOException {
 			PipedOutputStream pout = new PipedOutputStream();
 			PipedInputStream pin = new PipedInputStream(pout, 1024 * 16);
-			inQueue.add(pout);
+			synchronized (inQueue) {
+				inQueue.add(pout);
+			}
 			AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
 			AudioInputStream audio = new AudioInputStream(pin, format, AudioSystem.NOT_SPECIFIED);
 			audio = formatStream(audio);
@@ -208,7 +219,7 @@ public abstract class Audio {
 
 		@Override
 		public void play(AudioInputStream stream) throws InterruptedException {
-			// stream = formatStream(stream);
+			stream = formatStream(stream, format);
 			synchronized (outQueue) {
 				outQueue.add(stream);
 			}
@@ -248,7 +259,8 @@ public abstract class Audio {
 					}
 				}
 			}
-			{// Process in
+			// Process in
+			synchronized (inQueue) {
 				FloatBuffer inData = in.getFloatBuffer();
 				byte[] buffer = new byte[inData.capacity() * 2];
 				for (int i = 0; i < inData.capacity(); i++) {
@@ -272,14 +284,26 @@ public abstract class Audio {
 
 		@Override
 		public void sampleRateChanged(JackClient client, int sampleRate) {
-			if (client == JackAudio.this.client)
+			if (client == JackAudio.this.client) {
+				format = new AudioFormat(sampleRate, 16, 1, true, false);
 				this.sampleRate = sampleRate;
+			}
 		}
 	}
 
 	public static AudioInputStream formatStream(AudioInputStream in) {
-		if (!in.getFormat().equals(FORMAT))
-			in = AudioSystem.getAudioInputStream(FORMAT, in);
+		return formatStream(in, FORMAT);
+	}
+
+	public static AudioInputStream formatStream(AudioInputStream in, AudioFormat target) {
+		if (!in.getFormat().equals(target))
+			in = AudioSystem.getAudioInputStream(target, in);
 		return in;
+	}
+
+	public static byte[] readAllBytes(AudioInputStream in) throws IOException {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		IOUtils.copy(in, out);
+		return out.toByteArray();
 	}
 }

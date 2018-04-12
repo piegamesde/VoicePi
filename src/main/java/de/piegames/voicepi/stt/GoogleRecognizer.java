@@ -1,6 +1,5 @@
 package de.piegames.voicepi.stt;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -9,11 +8,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.TargetDataLine;
 import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
@@ -24,6 +18,7 @@ import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.audio.Audio;
 
 public class GoogleRecognizer extends SpeechRecognizer {
 
@@ -50,34 +45,14 @@ public class GoogleRecognizer extends SpeechRecognizer {
 		while (!Thread.currentThread().isInterrupted()) {
 			log.debug("Listening");
 			try {
-				AudioFormat format = new AudioFormat(8000, 16, 1, true, false);
-				DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-				TargetDataLine line = (TargetDataLine) AudioSystem.getLine(info);
-				line.open(format);
-				line.start(); // start capturing
-				AudioInputStream stream = new AudioInputStream(line);
-				new Thread(() -> {
-					try {
-						Thread.sleep(5000);
-						stream.close();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}).start();
-
-				ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-				line.stop();
-				line.close();
-				byte[] fileData = outputStream.toByteArray();
+				byte[] fileData = Audio.readAllBytes(control.getAudio().activeListening(30));
 				Files.write(Paths.get("test.wav"), fileData);
 				syncRecognizeFile(fileData);
-				// syncRecognizeFile(Files.readAllBytes(Paths.get("test2.wav")));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 		log.debug("Not listening anymore");
-
 	}
 
 	@Override
