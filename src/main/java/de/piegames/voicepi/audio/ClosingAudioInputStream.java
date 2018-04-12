@@ -10,15 +10,18 @@ import javax.sound.sampled.TargetDataLine;
 public class ClosingAudioInputStream extends AudioInputStream {
 
 	protected VolumeSpeechDetector volume;
+	protected boolean				waitForSpeak;
 
-	public ClosingAudioInputStream(TargetDataLine line, VolumeSpeechDetector volume) {
+	public ClosingAudioInputStream(TargetDataLine line, VolumeSpeechDetector volume, boolean waitForSpeak) {
 		super(line);
 		this.volume = Objects.requireNonNull(volume);
+		this.waitForSpeak = waitForSpeak;
 	}
 
-	public ClosingAudioInputStream(InputStream stream, AudioFormat format, long length, VolumeSpeechDetector volume) {
+	public ClosingAudioInputStream(InputStream stream, AudioFormat format, long length, VolumeSpeechDetector volume, boolean waitForSpeak) {
 		super(stream, format, length);
 		this.volume = Objects.requireNonNull(volume);
+		this.waitForSpeak = waitForSpeak;
 	}
 
 	@Override
@@ -35,7 +38,7 @@ public class ClosingAudioInputStream extends AudioInputStream {
 		}
 		rms = (float) Math.sqrt(rms / (read / 2));
 		volume.onSample(rms);
-		if (volume.isSpeaking()) {
+		if (volume.isSpeaking() ^ !waitForSpeak) {
 			close();
 		}
 

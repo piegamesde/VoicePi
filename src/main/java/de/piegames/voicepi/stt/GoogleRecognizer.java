@@ -90,11 +90,12 @@ public class GoogleRecognizer extends SpeechRecognizer {
 		RecognitionConfig config = RecognitionConfig.newBuilder()
 				.setEncoding(AudioEncoding.LINEAR16)
 				.setLanguageCode("de-DE")
-				.setSampleRateHertz(8000)
+				.setSampleRateHertz(16000)
 				.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()
 				.setContent(audioBytes)
 				.build();
+		// TODO add available commands as "context" so that Google will prefer them
 
 		// Use blocking call to get audio transcript
 		RecognizeResponse response = speech.recognize(config, audio);

@@ -11,7 +11,6 @@ import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -61,8 +60,12 @@ public abstract class Audio {
 	 * @throws LineUnavailableException
 	 * @throws IOException
 	 */
-	public abstract AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException;
-
+	public AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
+		return new ClosingAudioInputStream(normalListening(),
+				Audio.FORMAT,
+				AudioSystem.NOT_SPECIFIED,
+				volume, false);
+	}
 	/**
 	 * This will start listening until a command was spoken or {@code timeout} seconds passed and return the recorded data.
 	 *
@@ -77,7 +80,16 @@ public abstract class Audio {
 	 * @throws LineUnavailableException
 	 * @throws IOException
 	 */
-	public abstract AudioInputStream passiveListening() throws LineUnavailableException, IOException;
+	public AudioInputStream passiveListening() throws LineUnavailableException, IOException {
+		AudioInputStream stream = formatStream(normalListening());
+		ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume, true);
+		byte[] buffer = new byte[1024];
+		while (wait.read(buffer) != -1)
+			;
+		wait.close();// Actually not needed
+		volume.startSpeaking();
+		return new ClosingAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume, false);
+	}
 
 	public abstract void play(AudioInputStream stream) throws LineUnavailableException, IOException, InterruptedException;
 
@@ -88,6 +100,10 @@ public abstract class Audio {
 	}
 
 	public static class DefaultAudio extends Audio {
+
+		public DefaultAudio() {
+			super();
+		}
 
 		public DefaultAudio(AudioFormat format) {
 			super(format);
@@ -101,27 +117,6 @@ public abstract class Audio {
 			AudioInputStream stream = new AudioInputStream(line);
 			stream = formatStream(stream);
 			return stream;
-		}
-
-		@Override
-		public AudioInputStream activeListening(int timeout) throws LineUnavailableException {
-			return new ClosingAudioInputStream(
-					AudioSystem.getAudioInputStream(Encoding.PCM_SIGNED, AudioSystem.getAudioInputStream(FORMAT, normalListening())),
-					Audio.FORMAT,
-					AudioSystem.NOT_SPECIFIED,
-					volume);
-		}
-
-		@Override
-		public AudioInputStream passiveListening() throws LineUnavailableException, IOException {
-			AudioInputStream stream = formatStream(normalListening());
-			ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), FORMAT, AudioSystem.NOT_SPECIFIED, volume);
-			byte[] buffer = new byte[1024];
-			while (wait.read(buffer) != -1)
-				;
-			wait.close();// Actually not needed
-			volume.startSpeaking();
-			return new ClosingAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume);
 		}
 
 		@Override
@@ -149,6 +144,10 @@ public abstract class Audio {
 		protected int						sampleRate;
 		protected Queue<AudioInputStream>	outQueue	= new LinkedList<>();
 		protected Queue<OutputStream>		inQueue		= new LinkedList<>();
+
+		public JackAudio() {
+			super();
+		}
 
 		public JackAudio(AudioFormat format) {
 			super(format);
@@ -198,26 +197,6 @@ public abstract class Audio {
 		}
 
 		@Override
-		public AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
-			return new ClosingAudioInputStream(normalListening(),
-					Audio.FORMAT,
-					AudioSystem.NOT_SPECIFIED,
-					volume);
-		}
-
-		@Override
-		public AudioInputStream passiveListening() throws LineUnavailableException, IOException {
-			AudioInputStream stream = formatStream(normalListening());
-			ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume);
-			byte[] buffer = new byte[1024];
-			while (wait.read(buffer) != -1)
-				;
-			wait.close();// Actually not needed
-			volume.startSpeaking();
-			return new ClosingAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume);
-		}
-
-		@Override
 		public void play(AudioInputStream stream) throws InterruptedException {
 			stream = formatStream(stream, format);
 			synchronized (outQueue) {
@@ -230,6 +209,26 @@ public abstract class Audio {
 		public boolean process(JackClient client, int samples) {
 			// Process out
 			synchronized (outQueue) {
+				// Process in
+				synchronized (inQueue) {
+					FloatBuffer inData = in.getFloatBuffer();
+					byte[] buffer = new byte[inData.capacity() * 2];
+					for (int i = 0; i < inData.capacity(); i++) {
+						int sample = Math.round(inData.get(i) * 32767);
+						buffer[i * 2] = (byte) sample;
+						buffer[i * 2 + 1] = (byte) (sample >> 8);
+					}
+
+					inQueue.removeIf(out -> {
+						try {
+							out.write(buffer, 0, buffer.length);
+						} catch (IOException e) {
+							e.printStackTrace();
+							return true;
+						}
+						return false;
+					});
+				}
 				if (!outQueue.isEmpty()) {
 					FloatBuffer outData = out.getFloatBuffer();
 					try {
@@ -258,26 +257,6 @@ public abstract class Audio {
 						e.printStackTrace();
 					}
 				}
-			}
-			// Process in
-			synchronized (inQueue) {
-				FloatBuffer inData = in.getFloatBuffer();
-				byte[] buffer = new byte[inData.capacity() * 2];
-				for (int i = 0; i < inData.capacity(); i++) {
-					int sample = Math.round(inData.get(i) * 32767);
-					buffer[i * 2] = (byte) sample;
-					buffer[i * 2 + 1] = (byte) (sample >> 8);
-				}
-
-				inQueue.removeIf(out -> {
-					try {
-						out.write(buffer, 0, buffer.length);
-					} catch (IOException e) {
-						e.printStackTrace();
-						return true;
-					}
-					return false;
-				});
 			}
 			return true;
 		}
