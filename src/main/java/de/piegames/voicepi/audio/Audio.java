@@ -3,8 +3,6 @@ package de.piegames.voicepi.audio;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.nio.FloatBuffer;
 import java.util.EnumSet;
 import java.util.LinkedList;
@@ -19,6 +17,7 @@ import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.jaudiolibs.jnajack.Jack;
+import org.jaudiolibs.jnajack.JackBufferSizeCallback;
 import org.jaudiolibs.jnajack.JackClient;
 import org.jaudiolibs.jnajack.JackException;
 import org.jaudiolibs.jnajack.JackOptions;
@@ -137,12 +136,12 @@ public abstract class Audio {
 		}
 	}
 
-	public static class JackAudio extends Audio implements JackProcessCallback, JackSampleRateCallback {
+	public static class JackAudio extends Audio implements JackProcessCallback, JackSampleRateCallback, JackBufferSizeCallback {
 
 		protected JackClient				client;
 		protected JackPort					out, in;
 		protected AudioFormat				format;
-		protected int						sampleRate;
+		protected int						sampleRate, bufferSize;
 		protected Queue<AudioInputStream>	outQueue	= new LinkedList<>();
 		protected Queue<OutputStream>		inQueue		= new LinkedList<>();
 
@@ -168,9 +167,11 @@ public abstract class Audio {
 			out = client.registerPort("out", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsOutput));
 			client.setSampleRateCallback(this);
 			client.setProcessCallback(this);
+			client.setBuffersizeCallback(this);
 			client.activate();
 			client.transportStart();
 			sampleRateChanged(client, client.getSampleRate());
+			buffersizeChanged(client, client.getBufferSize());
 		}
 
 		@Override
@@ -186,8 +187,8 @@ public abstract class Audio {
 
 		@Override
 		public AudioInputStream normalListening() throws LineUnavailableException, IOException {
-			PipedOutputStream pout = new PipedOutputStream();
-			PipedInputStream pin = new PipedInputStream(pout, 1024 * 16);
+			NonBlockingPipedOutputStream pout = new NonBlockingPipedOutputStream();
+			NonBlockingPipedInputStream pin = new NonBlockingPipedInputStream(pout, bufferSize * 2 * 8);
 			synchronized (inQueue) {
 				inQueue.add(pout);
 			}
@@ -208,28 +209,28 @@ public abstract class Audio {
 
 		@Override
 		public boolean process(JackClient client, int samples) {
+			// Process in
+			synchronized (inQueue) {
+				FloatBuffer inData = in.getFloatBuffer();
+				byte[] buffer = new byte[inData.capacity() * 2];
+				for (int i = 0; i < inData.capacity(); i++) {
+					int sample = Math.round(inData.get(i) * 32767);
+					buffer[i * 2] = (byte) sample;
+					buffer[i * 2 + 1] = (byte) (sample >> 8);
+				}
+
+				inQueue.removeIf(out -> {
+					try {
+						out.write(buffer, 0, buffer.length);
+					} catch (IOException e) {
+						e.printStackTrace();
+						return true;
+					}
+					return false;
+				});
+			}
 			// Process out
 			synchronized (outQueue) {
-				// Process in
-				synchronized (inQueue) {
-					FloatBuffer inData = in.getFloatBuffer();
-					byte[] buffer = new byte[inData.capacity() * 2];
-					for (int i = 0; i < inData.capacity(); i++) {
-						int sample = Math.round(inData.get(i) * 32767);
-						buffer[i * 2] = (byte) sample;
-						buffer[i * 2 + 1] = (byte) (sample >> 8);
-					}
-
-					inQueue.removeIf(out -> {
-						try {
-							out.write(buffer, 0, buffer.length);
-						} catch (IOException e) {
-							e.printStackTrace();
-							return true;
-						}
-						return false;
-					});
-				}
 				if (!outQueue.isEmpty()) {
 					FloatBuffer outData = out.getFloatBuffer();
 					try {
@@ -267,6 +268,13 @@ public abstract class Audio {
 			if (client == JackAudio.this.client) {
 				format = new AudioFormat(sampleRate, 16, 1, true, false);
 				this.sampleRate = sampleRate;
+			}
+		}
+
+		@Override
+		public void buffersizeChanged(JackClient client, int bufferSize) {
+			if (client == JackAudio.this.client) {
+				this.bufferSize = bufferSize;
 			}
 		}
 	}

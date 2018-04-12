@@ -21,6 +21,7 @@ public abstract class SpeechEngine {
 	public SpeechEngine(VoicePi control, JsonObject config) {
 		this.config = config;
 		this.control = control;
+		// TODO move this into MultiSpeechEngine
 		if (config == null || config.isJsonNull() || !config.has("active-on"))
 			;
 		else if (config.get("active-on").isJsonPrimitive())
