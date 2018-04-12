@@ -42,5 +42,11 @@ public class StdInRecognizer extends SpeechRecognizer {
 		ignoreExceptions = true;
 		thread.interrupt();
 		scanner.close();
+		super.stopRecognition();
+	}
+
+	@Override
+	public boolean transcriptionSupported() {
+		return false;
 	}
 }

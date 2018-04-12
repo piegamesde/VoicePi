@@ -9,7 +9,7 @@ import java.util.concurrent.BlockingQueue;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 
-public class DeafRecognizer extends SpeechRecognizer implements SpeechTranscriber {
+public class DeafRecognizer extends SpeechRecognizer {
 
 	public DeafRecognizer(VoicePi control) {
 		this(control, null);
@@ -34,7 +34,12 @@ public class DeafRecognizer extends SpeechRecognizer implements SpeechTranscribe
 	}
 
 	@Override
-	public List<String> transcribe(int timeout) {
+	public List<String> transcribe() {
 		return Collections.emptyList();
+	}
+
+	@Override
+	public boolean transcriptionSupported() {
+		return true;
 	}
 }

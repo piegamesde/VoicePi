@@ -31,6 +31,7 @@ public class DebugAudioInputStream extends AudioInputStream {
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
 		int read = super.read(b, off, len);
+		line.write(b, off, read);
 		if (read == -1)
 			return read;
 		return read;

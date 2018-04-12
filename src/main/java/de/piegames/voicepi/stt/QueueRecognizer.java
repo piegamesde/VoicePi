@@ -41,4 +41,9 @@ public class QueueRecognizer extends SpeechRecognizer {
 				break;
 			}
 	}
+
+	@Override
+	public boolean transcriptionSupported() {
+		return false;
+	}
 }

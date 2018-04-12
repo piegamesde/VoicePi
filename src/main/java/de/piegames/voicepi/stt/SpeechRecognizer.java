@@ -62,6 +62,11 @@ public abstract class SpeechRecognizer implements Runnable {
 	public void stopRecognition() {
 		log.debug("Stopping " + getClass().getSimpleName());
 		thread.interrupt();
+		try {
+			thread.join(10000);
+		} catch (InterruptedException e) {
+			log.warn("Could not make sure that the recognizer thread has finished", e);
+		}
 		thread = null;
 	}
 

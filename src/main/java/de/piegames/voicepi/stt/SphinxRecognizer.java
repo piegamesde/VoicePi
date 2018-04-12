@@ -11,11 +11,10 @@ import de.piegames.voicepi.VoicePi;
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.SpeechResult;
 
-@SuppressWarnings("deprecation")
 public class SphinxRecognizer extends SphinxBaseRecognizer {
 
-	protected LiveSpeechRecognizer2	stt;
-	protected AudioFormat			format;
+	protected SphinxSpeechRecognizer	stt;
+	protected AudioFormat				format;
 
 	public SphinxRecognizer(VoicePi control, JsonObject config) {
 		super(control, config);
@@ -36,7 +35,7 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
 		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
-		stt = new LiveSpeechRecognizer2(sphinxConfig, control.getAudio());
+		stt = new SphinxSpeechRecognizer(sphinxConfig, control.getAudio());
 	}
 
 	@Override
@@ -56,6 +55,12 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 	}
 
 	@Override
+	public void deafenRecognition(boolean deaf) {
+		super.deafenRecognition(deaf);
+		stt.setDeaf(deaf);
+	}
+
+	@Override
 	public void startRecognition() {
 		log.debug("Starting SphinxRecognizer");
 		try {
@@ -72,14 +77,15 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 		log.debug("Stopping SphinxRecognizer");
 		thread.interrupt();
 		Thread.yield();
-		// Sorry, no other possibility here. Sphinx does not provide anything to stop it while recognizing.
-		// TODO fix this mess
-		thread.stop();
-		Thread.yield();
 		try {
 			stt.stopRecognition();
 		} catch (IllegalStateException | IOException e) {
 			log.error("Could not stop voice recognition", e);
+		}
+		try {
+			thread.join(10000);
+		} catch (InterruptedException e) {
+			log.warn("Could not make sure that the recognizer thread has finished", e);
 		}
 		thread = null;
 	}

@@ -73,19 +73,9 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 	}
 
 	@Override
-	public void startRecognition() {
-		log.debug("Starting PocketSphinxRecognizer");
-		thread = new Thread(this);
-		thread.start();
-		pipeline.play();
-	}
-
-	@Override
 	public void stopRecognition() {
-		log.debug("Stopping PocketSphinxRecognizer");
 		pipeline.pause();
-		thread.interrupt();
-		thread = null;
+		super.stopRecognition();
 	}
 
 	@Override
@@ -103,5 +93,10 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 	public void unload() {
 		pipeline.stop();
 		Gst.deinit();
+	}
+
+	@Override
+	public boolean transcriptionSupported() {
+		return false;
 	}
 }
