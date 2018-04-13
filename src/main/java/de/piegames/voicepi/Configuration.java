@@ -15,6 +15,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.piegames.voicepi.audio.Audio;
 import de.piegames.voicepi.module.Module;
 import de.piegames.voicepi.stt.SpeechRecognizer;
 import de.piegames.voicepi.tts.SpeechEngine;
@@ -33,9 +34,10 @@ public class Configuration {
 	protected final Log				log	= LogFactory.getLog(getClass());
 
 	protected final Path			path;
-	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig, settingsConfig;
+	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig, settingsConfig, audioConfig;
 	protected SpeechEngine			customTTS;
 	protected SpeechRecognizer		customSTT;
+	protected Audio					customAudio;
 	protected Map<String, Module>	customModules;
 	protected Settings				customSettings;
 
@@ -77,6 +79,7 @@ public class Configuration {
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
 		ttsConfig = config.getAsJsonObject("tts");
+		audioConfig = config.getAsJsonObject("audio");
 		settingsConfig = config;
 	}
 
@@ -89,7 +92,11 @@ public class Configuration {
 	}
 
 	public JsonObject getTTSConfig() {
-		return ttsConfig.getAsJsonObject();
+		return ttsConfig;
+	}
+
+	public JsonObject getAudioConfig() {
+		return audioConfig;
 	}
 
 	public JsonObject getSettingsConfig() {
@@ -146,6 +153,17 @@ public class Configuration {
 		}
 	}
 
+	public Audio loadAudioFromConfig() {
+		try {
+			return (Audio) Class.forName(audioConfig.getAsJsonPrimitive("class-name").getAsString())
+					.getConstructor(JsonObject.class)
+					.newInstance(audioConfig);
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+			log.warn("Could not instantiate audio settings as specified in the config file", e);
+			return null;
+		}
+	}
+
 	public Settings loadSettingsFromConfig() {
 		return VoicePi.GSON.fromJson(settingsConfig, Settings.class);
 	}
@@ -156,6 +174,10 @@ public class Configuration {
 
 	public void setSTT(SpeechRecognizer stt) {
 		this.customSTT = stt;
+	}
+
+	public void setAudio(Audio audio) {
+		this.customAudio = audio;
 	}
 
 	public void setModules(Map<String, Module> modules) {
@@ -172,6 +194,10 @@ public class Configuration {
 
 	public SpeechRecognizer getSTT() {
 		return customSTT;
+	}
+
+	public Audio getAudio() {
+		return customAudio;
 	}
 
 	public Map<String, Module> getModules() {

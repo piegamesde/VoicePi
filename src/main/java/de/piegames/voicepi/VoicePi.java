@@ -17,6 +17,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jaudiolibs.jnajack.JackException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
@@ -47,7 +48,7 @@ public class VoicePi implements Runnable {
 	protected SpeechEngine						tts;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected SpeechRecognizer					stt;
-	protected Audio								audio			= new Audio.DefaultAudio(Audio.FORMAT);	// TODO
+	protected Audio								audio;
 	protected Map<String, Module>				modules			= new HashMap<>();
 	protected Settings							settings		= new Settings();
 	protected final Queue<ContextState>			notifications	= new SynchronousQueue<>();
@@ -161,6 +162,12 @@ public class VoicePi implements Runnable {
 			stt = null;
 		}
 		tts = null;
+		if (audio != null)
+			try {
+				audio.close();
+			} catch (JackException | IOException e2) {
+				log.warn("Could not close audio", e2);
+			}
 		modules.values().forEach(Module::close);
 		modules.clear();
 
@@ -201,6 +208,17 @@ public class VoicePi implements Runnable {
 			stateMachine.addModuleGraph(module.listCommands(stateMachine.getRoot()));
 			this.modules.put(name, module);
 		});
+
+		{// Load audio
+			audio = config.getAudio();
+			if (audio == null)
+				audio = config.loadAudioFromConfig();
+			if (audio == null) {
+				log.fatal("Cannot load audio from configuration. This is required to run VoicePi!");
+				exitApplication();
+				throw new InternalError("Could not load audio");
+			}
+		}
 
 		// Get all commands
 		Set<String> commands = stateMachine.getAllCommands();
@@ -246,8 +264,10 @@ public class VoicePi implements Runnable {
 		exit = true;
 
 		log.info("Stopping speech recognition");
-		stt.stopRecognition();
-		stt.unload();
+		if (stt != null) {
+			stt.stopRecognition();
+			stt.unload();
+		}
 		modules.values().forEach(Module::close);
 		settings.onExit.execute(this, log, "onExit");
 		log.info("Quitting application");

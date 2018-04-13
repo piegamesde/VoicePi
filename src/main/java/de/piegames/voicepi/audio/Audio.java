@@ -6,7 +6,7 @@ import java.io.OutputStream;
 import java.nio.FloatBuffer;
 import java.util.EnumSet;
 import java.util.LinkedList;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Queue;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -28,6 +28,8 @@ import org.jaudiolibs.jnajack.JackProcessCallback;
 import org.jaudiolibs.jnajack.JackSampleRateCallback;
 import org.jaudiolibs.jnajack.JackStatus;
 import com.google.api.client.util.IOUtils;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 public abstract class Audio {
 
@@ -37,13 +39,13 @@ public abstract class Audio {
 	protected AudioFormat			format;
 	protected VolumeSpeechDetector	volume;
 
-	public Audio() {
-		this(FORMAT);
-	}
-
-	public Audio(AudioFormat format) {
-		this.format = Objects.requireNonNull(format);
-		volume = new VolumeSpeechDetector(100, 500);
+	public Audio(JsonObject config) {
+		this.format = new AudioFormat(
+				Optional.ofNullable(config.getAsJsonPrimitive("sample-rate")).map(JsonPrimitive::getAsFloat).orElse(FORMAT.getSampleRate()),
+				Optional.ofNullable(config.getAsJsonPrimitive("sample-size")).map(JsonPrimitive::getAsInt).orElse(FORMAT.getSampleSizeInBits()),
+				Optional.ofNullable(config.getAsJsonPrimitive("channels")).map(JsonPrimitive::getAsInt).orElse(FORMAT.getChannels()),
+				Optional.ofNullable(config.getAsJsonPrimitive("signed")).map(JsonPrimitive::getAsBoolean).orElse(true),
+				Optional.ofNullable(config.getAsJsonPrimitive("big-endian")).map(JsonPrimitive::getAsBoolean).orElse(false));
 	}
 
 	/**
@@ -101,12 +103,8 @@ public abstract class Audio {
 
 	public static class DefaultAudio extends Audio {
 
-		public DefaultAudio() {
-			super();
-		}
-
-		public DefaultAudio(AudioFormat format) {
-			super(format);
+		public DefaultAudio(JsonObject config) {
+			super(config);
 		}
 
 		@Override
@@ -140,23 +138,12 @@ public abstract class Audio {
 
 		protected JackClient				client;
 		protected JackPort					out, in;
-		protected AudioFormat				format;
 		protected int						sampleRate, bufferSize;
 		protected Queue<AudioInputStream>	outQueue	= new LinkedList<>();
 		protected Queue<OutputStream>		inQueue		= new LinkedList<>();
 
-		public JackAudio() {
-			super();
-		}
-
-		public JackAudio(AudioFormat format) {
-			super(format);
-			try {// TODO remove
-				init();
-				Thread.sleep(10000);
-			} catch (JackException | InterruptedException e) {
-				e.printStackTrace();
-			}
+		public JackAudio(JsonObject config) {
+			super(config);
 		}
 
 		@Override
@@ -169,9 +156,9 @@ public abstract class Audio {
 			client.setProcessCallback(this);
 			client.setBuffersizeCallback(this);
 			client.activate();
-			client.transportStart();
 			sampleRateChanged(client, client.getSampleRate());
 			buffersizeChanged(client, client.getBufferSize());
+			client.transportStart();
 		}
 
 		@Override
@@ -192,7 +179,6 @@ public abstract class Audio {
 			synchronized (inQueue) {
 				inQueue.add(pout);
 			}
-			AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, false);
 			AudioInputStream audio = new AudioInputStream(pin, format, AudioSystem.NOT_SPECIFIED);
 			audio = formatStream(audio);
 			return audio;
@@ -234,26 +220,20 @@ public abstract class Audio {
 				if (!outQueue.isEmpty()) {
 					FloatBuffer outData = out.getFloatBuffer();
 					try {
-						AudioInputStream stream = outQueue.peek();
 						byte[] buffer = new byte[samples * 2];
-						int position = 0;
-						while (position < samples * 2) {
-							int read = stream.read(buffer, position, samples * 2 - position);
-							for (int i = position; i < position + read;) {
+						float[] buffer2 = new float[samples];
+						for (AudioInputStream stream : outQueue) {
+							int read = stream.read(buffer, 0, samples * 2);
+							for (int i = 0; i < read;) {
 								int sample = 0;
 								sample |= buffer[i++] & 0xFF; // (reverse these two lines
 								sample |= buffer[i++] << 8; // if the format is big endian)
-								outData.put(sample / 32768f);
+								buffer2[i / 2] += sample / 32768f;
 							}
-							position += read;
-							if (read < samples * 2) {
+							if (read < samples * 2)
 								stream.close();
-								outQueue.poll();
-								if (outQueue.isEmpty())
-									break;
-								stream = outQueue.peek();
-							}
 						}
+						outData.put(buffer2);
 					} catch (IOException e) {
 						// TODO exception handling
 						e.printStackTrace();
