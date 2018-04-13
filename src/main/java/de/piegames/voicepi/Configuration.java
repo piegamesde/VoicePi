@@ -22,12 +22,14 @@ import de.piegames.voicepi.tts.SpeechEngine;
 
 /**
  * This class manages the configuration file of the application, including loading saving and providing default values. Settings are mapped to JsonObject that
- * can be requested and modified. Any modifications will be reflected in the configuration file when saving the next time.
- *
+ * can be requested and modified. Any modifications will be reflected in the configuration file when saving the next time. <br/>
  * It also allows for overriding some of the values by calling the respective methods through code. This allows the configuration to be used without any real
  * configuration file (load the defaults and then override them). This is especially useful for Unit Tests, but might come in handy for other scenarios too.
- *
- *
+ * <br/>
+ * The {@code customXXX} fields are used to store these custom values. They can be accessed through the {@code getXXX} and {@code setXXX} methods and won't be
+ * used by this class. When reloading, the {@link VoicePi} will check though the getters if the respective custom object is set. If yes, it will use that one.
+ * If no, it will call the {@code loadXXXFromConfig} and use that one instead. Note that the {@code loadXXXFromConfig} does not alter any of the
+ * {@code customXXX} fields. It only returns the newly created object.
  */
 public class Configuration {
 
@@ -51,10 +53,12 @@ public class Configuration {
 		this.path = path;
 	}
 
+	/** Returns the path where the configuration file is expected to be by default. */
 	public Path getDefaultPath() {
 		return Paths.get("config.json");
 	}
 
+	/** This will load a default configuration file from within the .jar */
 	public void loadDefaultConfig() {
 		log.info("Loading default configuration at " + getClass().getResource("/defaultconfig.json"));
 		try {
@@ -64,10 +68,12 @@ public class Configuration {
 		}
 	}
 
+	/** This will load the configuration specified at the path set in the constructor */
 	public void loadConfig() throws IOException {
 		loadConfig(path);
 	}
 
+	/** This will load the configuration from a file at the given location */
 	private void loadConfig(Path path) throws IOException {
 		// Load config
 		log.info("Loading configuration from file " + path.toAbsolutePath());

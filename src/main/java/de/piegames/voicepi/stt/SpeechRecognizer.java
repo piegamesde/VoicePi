@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import org.apache.commons.logging.Log;
@@ -13,6 +14,22 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 
+/**
+ * <p>
+ * A speech recognizer will record audio from an audio source and transcribe what has been said ("speech to text", <i>STT</i>). A {@code SpeechRecohnizer} will
+ * take in text from any source (depending on the implementation) and pass it to the application. This may involve performing STT, but other input methods are
+ * valid too. This class is the primary interface for the user to communicate with the application.
+ * </p>
+ * <p>
+ * The recognizer, once started, will run in a separate thread where it will be listening for text commands from the user. If it detects any, it will push them
+ * onto a queue from where the {@link VoicePi} will take and process it. If the recognizer does get its messages from another source (like a listener or a
+ * callback), the {@link #run()} method may be left empty. The implementation of this class can safely assume that {@link #load(BlockingQueue, Set)} will be
+ * called before using it and {@link #unload()} after using it and then never use it again. The methods {@link #startRecognition()} and
+ * {@link #stopRecognition()} may be called multiple times, but never so that more than one thread might be started.
+ * </p>
+ * <p>
+ * </p>
+ */
 public abstract class SpeechRecognizer implements Runnable {
 
 	protected final Log							log			= LogFactory.getLog(getClass());
@@ -38,10 +55,22 @@ public abstract class SpeechRecognizer implements Runnable {
 			activate.add("*:*");
 	}
 
-	public abstract void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException;
 
 	/**
-	 * Called in a background thread. This method will continuously listen for any spoken commands and add them to {@code #commandsSpoken}.
+	 * This will be called on startup to load all the necessary data to perform STT.
+	 * 
+	 * @param commandsSpoken a {@link BlockingQueue} where to put all commands that got recognized. {@link VoicePi} will take them from the queue and process
+	 *            them. The queue is not size limited and will never block while adding items to it.
+	 * @param commands a set of commands that got registered by the modules. If the STT is using a finite vocabulary, this is it. If the STT works with
+	 *            arbitrary sentences, it may be used to improve recognition quality.
+	 */
+	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		this.commandsSpoken = Objects.requireNonNull(commandsSpoken);
+	}
+
+	/**
+	 * Called in a background thread. This method will continuously listen for any spoken commands and add them to {@code #commandsSpoken}. It is expected to
+	 * return if {@link Thread#interrupt()} is called.
 	 */
 	@Override
 	public abstract void run();
