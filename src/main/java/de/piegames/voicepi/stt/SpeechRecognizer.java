@@ -36,23 +36,12 @@ public abstract class SpeechRecognizer implements Runnable {
 	protected JsonObject						config;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected Thread							thread;
-	protected List<String>						activate	= new ArrayList<>();
 	protected VoicePi							control;
 	protected volatile boolean					deaf;
 
 	public SpeechRecognizer(VoicePi control, JsonObject config) {
 		this.config = config;
 		this.control = control;
-		// TODO move activate into MultiEngine (without changing the way the user configures it)
-		if (config == null || config.isJsonNull() || !config.has("active-on"))
-			;
-		else if (config.get("active-on").isJsonPrimitive())
-			activate.add(config.getAsJsonPrimitive("active-on").getAsString());
-		else
-			for (JsonElement f : config.getAsJsonArray("active-on"))
-				activate.add(f.getAsString());
-		if (activate.isEmpty())
-			activate.add("*:*");
 	}
 
 

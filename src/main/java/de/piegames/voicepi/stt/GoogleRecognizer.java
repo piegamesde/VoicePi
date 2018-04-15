@@ -1,24 +1,18 @@
 package de.piegames.voicepi.stt;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
-import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
+
+import com.google.cloud.speech.v1p1beta1.*;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
-import com.google.cloud.speech.v1p1beta1.RecognizeResponse;
-import com.google.cloud.speech.v1p1beta1.SpeechClient;
-import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
-import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.audio.Audio;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.LineUnavailableException;
 
 public class GoogleRecognizer extends SpeechRecognizer {
 
@@ -36,10 +30,11 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			log.debug("Listening");
 			try {
 				byte[] fileData = Audio.readAllBytes(control.getAudio().listenCommand());
-				Files.write(Paths.get("test.wav"), fileData);
-				syncRecognizeFile(fileData);
+				List<String> strres = syncRecognizeData(fileData);
+				this.commandsSpoken.offer(strres);
 			} catch (Exception e) {
-				e.printStackTrace();
+				log.error("Could not analyze audio: ", e);
+				//e.printStackTrace();
 			}
 		}
 		log.debug("Not listening anymore");
@@ -53,13 +48,38 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	}
 
 	@Override
-	public void unload() {
-
+	public boolean transcriptionSupported() {
+		return true;
 	}
 
-	public void syncRecognizeFile(byte[] data) throws Exception, IOException {
-		SpeechClient speech = SpeechClient.create(); // TODO reuse variable
+	@Override
+	public List<String> transcribe() {
+		AudioInputStream ai = null;
+		try {
+			ai = control.getAudio().listenCommand();
+			byte[] b = Audio.readAllBytes(ai);
+			return syncRecognizeData(b);
+		} catch (LineUnavailableException e) {
+			log.error("Could not read from microphone input", e);
+			//e.printStackTrace();
+		} catch (IOException e) {
+			log.error("Could not read from microphone input", e);
+			//e.printStackTrace();
+		} catch (Exception e) {
+			log.error("Could not analyze microphone input", e);
+		}
+		return Collections.emptyList();
+	}
 
+	@Override
+	public void unload() {
+	}
+
+	public List<String> syncRecognizeData(byte[] data) throws Exception, IOException {
+		if (data == null)
+			return Collections.emptyList();
+		log.info("Processing audio data...");
+		SpeechClient speech = SpeechClient.create(); // TODO reuse variable
 		ByteString audioBytes = ByteString.copyFrom(data);
 
 		// Configure request with local raw PCM audio
@@ -67,11 +87,11 @@ public class GoogleRecognizer extends SpeechRecognizer {
 				.setEncoding(AudioEncoding.LINEAR16)
 				.setLanguageCode(control.getSettings().getLangCode())
 				.setSampleRateHertz(16000)
+				.setSpeechContexts(0, SpeechContext.newBuilder().addAllPhrases(control.getStateMachine().getAvailableCommands()))
 				.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()
 				.setContent(audioBytes)
 				.build();
-		// TODO add available commands as "context" so that Google will prefer them
 
 		// Use blocking call to get audio transcript
 		RecognizeResponse response = speech.recognize(config, audio);
@@ -84,7 +104,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			SpeechRecognitionAlternative alternative = result.getAlternativesList().get(0);
 			strres.add(alternative.getTranscript().toUpperCase());
 		}
-		this.commandsSpoken.offer(strres);
 		speech.close();
+		return strres;
 	}
 }

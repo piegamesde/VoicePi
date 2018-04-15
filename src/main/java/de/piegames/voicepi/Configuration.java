@@ -32,6 +32,8 @@ import de.piegames.voicepi.tts.SpeechEngine;
  * {@code customXXX} fields. It only returns the newly created object.
  */
 public class Configuration {
+    // TODO catch all NullPointerExc, eg. the config file is incorrect
+
 
 	protected final Log				log	= LogFactory.getLog(getClass());
 

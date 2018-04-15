@@ -46,6 +46,7 @@ public abstract class Audio {
 				Optional.ofNullable(config.getAsJsonPrimitive("channels")).map(JsonPrimitive::getAsInt).orElse(FORMAT.getChannels()),
 				Optional.ofNullable(config.getAsJsonPrimitive("signed")).map(JsonPrimitive::getAsBoolean).orElse(true),
 				Optional.ofNullable(config.getAsJsonPrimitive("big-endian")).map(JsonPrimitive::getAsBoolean).orElse(false));
+		//TODO ????!!!??! this.volume = new VolumeSpeechDetector(300, 300);
 	}
 
 	/**
