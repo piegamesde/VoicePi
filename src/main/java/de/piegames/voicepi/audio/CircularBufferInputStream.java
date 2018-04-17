@@ -16,22 +16,21 @@ public class CircularBufferInputStream extends InputStream {
 	@Override
 	public int read() throws IOException {
 		if (buffer == null)
-			throw new IOException("Stream closed");
+			return -1;
 		return buffer.get();
 	}
 
 	@Override
 	public int read(byte b[], int off, int len) throws IOException {
 		if (buffer == null)
-			throw new IOException("Stream closed");
+			return -1;
 		return buffer.get(b, off, len);
 	}
 
 	@Override
 	public void close() throws IOException {
-		if (buffer == null)
-			throw new IOException("Stream closed");
-		buffer.free();
+		if (buffer != null)
+			buffer.free();
 		buffer = null;
 	}
 

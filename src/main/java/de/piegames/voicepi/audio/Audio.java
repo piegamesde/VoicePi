@@ -48,7 +48,8 @@ public abstract class Audio {
 				Optional.ofNullable(config.getAsJsonPrimitive("channels")).map(JsonPrimitive::getAsInt).orElse(FORMAT.getChannels()),
 				Optional.ofNullable(config.getAsJsonPrimitive("signed")).map(JsonPrimitive::getAsBoolean).orElse(true),
 				Optional.ofNullable(config.getAsJsonPrimitive("big-endian")).map(JsonPrimitive::getAsBoolean).orElse(false));
-		// TODO ????!!!??! this.volume = new VolumeSpeechDetector(300, 300);
+		// TODO configure
+		this.volume = new VolumeSpeechDetector(300, 300);
 	}
 
 	/**
@@ -238,7 +239,7 @@ public abstract class Audio {
 					for (AudioInputStream stream : outQueue) {
 						try {
 							int read = stream.read(buffer, 0, samples * 4);
-							for (int i = 0; i < read / 4; i++)
+							for (int i = 0; i < read / 4; i++) // TODO if the first stream does not read all samples, this will fail
 								outData.put(i, (first ? 0 : outData.get(i)) + floatBuffer.get(i));
 							if (read < samples * 4) {
 								stream.close();
