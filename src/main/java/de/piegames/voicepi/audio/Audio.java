@@ -2,13 +2,14 @@ package de.piegames.voicepi.audio;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Queue;
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -16,6 +17,7 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
 import org.apache.commons.io.input.CloseShieldInputStream;
+import org.greenrobot.essentials.io.CircularByteBuffer;
 import org.jaudiolibs.jnajack.Jack;
 import org.jaudiolibs.jnajack.JackBufferSizeCallback;
 import org.jaudiolibs.jnajack.JackClient;
@@ -46,7 +48,7 @@ public abstract class Audio {
 				Optional.ofNullable(config.getAsJsonPrimitive("channels")).map(JsonPrimitive::getAsInt).orElse(FORMAT.getChannels()),
 				Optional.ofNullable(config.getAsJsonPrimitive("signed")).map(JsonPrimitive::getAsBoolean).orElse(true),
 				Optional.ofNullable(config.getAsJsonPrimitive("big-endian")).map(JsonPrimitive::getAsBoolean).orElse(false));
-		//TODO ????!!!??! this.volume = new VolumeSpeechDetector(300, 300);
+		// TODO ????!!!??! this.volume = new VolumeSpeechDetector(300, 300);
 	}
 
 	/**
@@ -137,11 +139,11 @@ public abstract class Audio {
 
 	public static class JackAudio extends Audio implements JackProcessCallback, JackSampleRateCallback, JackBufferSizeCallback {
 
-		protected JackClient				client;
-		protected JackPort					out, in;
-		protected int						sampleRate, bufferSize;
-		protected Queue<AudioInputStream>	outQueue	= new LinkedList<>();
-		protected Queue<OutputStream>		inQueue		= new LinkedList<>();
+		protected JackClient						client;
+		protected JackPort							out, in;
+		protected int								sampleRate, bufferSize;
+		protected Queue<AudioInputStream>			outQueue	= new LinkedList<>();
+		protected Queue<CircularBufferInputStream>	inQueue		= new LinkedList<>();
 
 		public JackAudio(JsonObject config) {
 			super(config);
@@ -171,48 +173,56 @@ public abstract class Audio {
 					in.close();
 				outQueue.clear();
 			}
+			synchronized (inQueue) {
+				for (CircularBufferInputStream in : inQueue) {
+					in.close();
+					in.notifyAll();
+				}
+				inQueue.clear();
+			}
 		}
 
 		@Override
 		public AudioInputStream normalListening() throws LineUnavailableException, IOException {
-			NonBlockingPipedOutputStream pout = new NonBlockingPipedOutputStream();
-			NonBlockingPipedInputStream pin = new NonBlockingPipedInputStream(pout, bufferSize * 2 * 8);
+			CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 4 * 8));
 			synchronized (inQueue) {
-				inQueue.add(pout);
+				inQueue.add(in);
 			}
-			AudioInputStream audio = new AudioInputStream(pin, format, AudioSystem.NOT_SPECIFIED);
+			AudioInputStream audio = new AudioInputStream(in, format, AudioSystem.NOT_SPECIFIED);
 			audio = formatStream(audio);
 			return audio;
 		}
 
 		@Override
-		public void play(AudioInputStream stream) throws InterruptedException {
+		public void play(AudioInputStream stream) {
 			stream = formatStream(stream, format);
 			synchronized (outQueue) {
 				outQueue.add(stream);
 			}
-			// TODO this won't wait but it should
+			synchronized (stream) {
+				try {
+					stream.wait();
+				} catch (InterruptedException e) {
+
+				}
+				System.out.println("Finished waiting " + stream);
+			}
+			synchronized (outQueue) {
+				outQueue.remove(stream);
+			}
 		}
 
 		@Override
 		public boolean process(JackClient client, int samples) {
 			// Process in
 			synchronized (inQueue) {
-				FloatBuffer inData = in.getFloatBuffer();
-				byte[] buffer = new byte[inData.capacity() * 2];
-				for (int i = 0; i < inData.capacity(); i++) {
-					int sample = Math.round(inData.get(i) * 32767);
-					buffer[i * 2] = (byte) sample;
-					buffer[i * 2 + 1] = (byte) (sample >> 8);
-				}
-
+				byte[] inData = new byte[samples * 4];
+				in.getBuffer().get(inData);
 				inQueue.removeIf(out -> {
-					try {
-						out.write(buffer, 0, buffer.length);
-					} catch (IOException e) {
-						e.printStackTrace();
+					CircularByteBuffer b = out.getBuffer();
+					if (b == null)
 						return true;
-					}
+					b.put(inData);
 					return false;
 				});
 			}
@@ -220,25 +230,32 @@ public abstract class Audio {
 			synchronized (outQueue) {
 				if (!outQueue.isEmpty()) {
 					FloatBuffer outData = out.getFloatBuffer();
-					try {
-						byte[] buffer = new byte[samples * 2];
-						float[] buffer2 = new float[samples];
-						for (AudioInputStream stream : outQueue) {
-							int read = stream.read(buffer, 0, samples * 2);
-							for (int i = 0; i < read;) {
-								int sample = 0;
-								sample |= buffer[i++] & 0xFF; // (reverse these two lines
-								sample |= buffer[i++] << 8; // if the format is big endian)
-								buffer2[i / 2] += sample / 32768f;
-							}
-							if (read < samples * 2)
+					// TODO cache all buffers
+					byte[] buffer = new byte[samples * 4];
+					ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
+					FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
+					boolean first = true;
+					for (AudioInputStream stream : outQueue) {
+						try {
+							int read = stream.read(buffer, 0, samples * 4);
+							for (int i = 0; i < read / 4; i++)
+								outData.put(i, (first ? 0 : outData.get(i)) + floatBuffer.get(i));
+							if (read < samples * 4) {
 								stream.close();
+								synchronized (stream) {
+									System.out.println("Notify " + stream);
+									stream.notifyAll();
+								}
+							}
+						} catch (IOException e) {
+							// TODO exception handling
+							e.printStackTrace();
 						}
-						outData.put(buffer2);
-					} catch (IOException e) {
-						// TODO exception handling
-						e.printStackTrace();
+						first = false;
 					}
+				} else {
+					// TODO only write this one time
+					out.getFloatBuffer().put(new float[samples]);
 				}
 			}
 			return true;
@@ -247,7 +264,8 @@ public abstract class Audio {
 		@Override
 		public void sampleRateChanged(JackClient client, int sampleRate) {
 			if (client == JackAudio.this.client) {
-				format = new AudioFormat(sampleRate, 16, 1, true, false);
+				// format = new AudioFormat(sampleRate, 16, 1, true, false);
+				format = new AudioFormat(Encoding.PCM_FLOAT, sampleRate, 32, 1, 4, sampleRate, true);
 				this.sampleRate = sampleRate;
 			}
 		}
@@ -258,6 +276,7 @@ public abstract class Audio {
 				this.bufferSize = bufferSize;
 			}
 		}
+
 	}
 
 	public static AudioInputStream formatStream(AudioInputStream in) {

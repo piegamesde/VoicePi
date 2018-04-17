@@ -213,6 +213,12 @@ public class VoicePi implements Runnable {
 			audio = config.getAudio();
 			if (audio == null)
 				audio = config.loadAudioFromConfig();
+			try {
+				audio.init();
+			} catch (JackException e) {
+				log.error("Could not initialize audio", e);
+				audio = null;
+			}
 			if (audio == null) {
 				log.fatal("Cannot load audio from configuration. This is required to run VoicePi!");
 				exitApplication();
