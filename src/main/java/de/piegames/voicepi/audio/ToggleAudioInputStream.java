@@ -9,14 +9,16 @@ import javax.sound.sampled.TargetDataLine;
 
 public class ToggleAudioInputStream extends AudioInputStream {
 
-	protected boolean deaf;
+	protected boolean deaf, cutSilence;
 
-	public ToggleAudioInputStream(TargetDataLine line) {
+	public ToggleAudioInputStream(TargetDataLine line, boolean cutSilence) {
 		super(line);
+		this.cutSilence = cutSilence;
 	}
 
-	public ToggleAudioInputStream(InputStream stream, AudioFormat format, long length) {
+	public ToggleAudioInputStream(InputStream stream, AudioFormat format, long length, boolean cutSilence) {
 		super(stream, format, length);
+		this.cutSilence = cutSilence;
 	}
 
 	@Override
@@ -27,12 +29,16 @@ public class ToggleAudioInputStream extends AudioInputStream {
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
-		int read = super.read(b, off, len);
-		if (read == -1)
-			return read;
-		if (deaf)
-			Arrays.fill(b, off, off + read, (byte) 0);
-		return read;
+		if (deaf) {
+			int read = (int) super.skip(len);
+			if (cutSilence)
+				return 0;
+			else {
+				Arrays.fill(b, off, off + read, (byte) 0);
+				return read;
+			}
+		} else
+			return super.read(b, off, len);
 	}
 
 	public void setDeaf(boolean deaf) {

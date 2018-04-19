@@ -3,6 +3,7 @@ package de.piegames.voicepi.audio;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.EnumSet;
 import java.util.LinkedList;
@@ -16,7 +17,6 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
-import org.apache.commons.io.input.CloseShieldInputStream;
 import org.greenrobot.essentials.io.CircularByteBuffer;
 import org.jaudiolibs.jnajack.Jack;
 import org.jaudiolibs.jnajack.JackBufferSizeCallback;
@@ -32,11 +32,14 @@ import org.jaudiolibs.jnajack.JackStatus;
 import com.google.api.client.util.IOUtils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import de.piegames.voicepi.audio.VolumeSpeechDetector.State;
+import javafx.beans.value.ChangeListener;
 
 public abstract class Audio {
 
 	/** The default format. It will be used for all audio processing and if possible for audio recording. */
 	public static final AudioFormat	FORMAT	= new AudioFormat(16000, 16, 1, true, false);
+	// public static final AudioFormat FORMAT = new AudioFormat(48000, 16, 1, true, false);
 
 	protected AudioFormat			format;
 	protected VolumeSpeechDetector	volume;
@@ -49,7 +52,7 @@ public abstract class Audio {
 				Optional.ofNullable(config.getAsJsonPrimitive("signed")).map(JsonPrimitive::getAsBoolean).orElse(true),
 				Optional.ofNullable(config.getAsJsonPrimitive("big-endian")).map(JsonPrimitive::getAsBoolean).orElse(false));
 		// TODO configure
-		this.volume = new VolumeSpeechDetector(300, 300);
+		this.volume = new VolumeSpeechDetector(300, 750);
 	}
 
 	/**
@@ -67,18 +70,22 @@ public abstract class Audio {
 	 */
 	@Deprecated
 	protected AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
-		return new ClosingAudioInputStream(normalListening(),
+		RMSAudioInputStream rms = new RMSAudioInputStream(normalListening(),
 				Audio.FORMAT,
 				AudioSystem.NOT_SPECIFIED,
-				volume, false);
+				volume);
+		// TODO make the volume safe to multiple concurrent listeners
+		volume.startSpeaking();
+		rms.state.addListener((ChangeListener<State>) (observable, oldValue, newValue) -> {
+			if (newValue == State.QUIET)
+				try {
+					rms.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+		});
+		return rms;
 	}
-	/**
-	 * This will start listening until a command was spoken or {@code timeout} seconds passed and return the recorded data.
-	 *
-	 * @throws LineUnavailableException
-	 * @throws IOException
-	 */
-	// public abstract byte[] activeListeningRaw(int timeout) throws LineUnavailableException, IOException;
 
 	/**
 	 * This will wait until a command gets spoken, then return and automatically stop listening once the command is over
@@ -87,14 +94,31 @@ public abstract class Audio {
 	 * @throws IOException
 	 */
 	public AudioInputStream listenCommand() throws LineUnavailableException, IOException {
-		AudioInputStream stream = formatStream(normalListening());
-		ClosingAudioInputStream wait = new ClosingAudioInputStream(new CloseShieldInputStream(stream), stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume, true);
-		byte[] buffer = new byte[1024];
-		while (wait.read(buffer) != -1)
-			;
-		wait.close();// Actually not needed
-		volume.startSpeaking();
-		return new ClosingAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume, false);
+		// TODO optimize this all, cache buffers, make constants settings
+		AudioInputStream stream = normalListening();
+		VolumeSpeechDetector volume = new VolumeSpeechDetector(0, 750);
+		RMSAudioInputStream wait = new RMSAudioInputStream(stream, stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume);
+		long startTime = System.currentTimeMillis();
+		System.out.println("Calibrating");
+		while (System.currentTimeMillis() - startTime < 1000)
+			wait.read(new byte[1024]);
+		System.out.println("Calibrated " + volume.average);
+		volume.lockVolume();
+		ToggleAudioInputStream toggle = new ToggleAudioInputStream(wait, stream.getFormat(), AudioSystem.NOT_SPECIFIED, true);
+		toggle.setDeaf(true);
+		wait.state.addListener((observable, oldVal, newVal) -> {
+			System.out.println(newVal + " (" + oldVal + ")");
+			if (newVal != State.QUIET && oldVal == State.QUIET)
+				toggle.setDeaf(false);
+			if (newVal == State.QUIET && oldVal != State.QUIET)
+				try {
+					System.out.println("close");
+					toggle.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+		});
+		return new RMSAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume);
 	}
 
 	public abstract void play(AudioInputStream stream) throws LineUnavailableException, IOException, InterruptedException;
@@ -103,6 +127,10 @@ public abstract class Audio {
 	}
 
 	public void close() throws JackException, IOException {
+	}
+
+	public AudioFormat getFormat() {
+		return format;
 	}
 
 	public static class DefaultAudio extends Audio {
@@ -143,7 +171,7 @@ public abstract class Audio {
 		protected JackClient						client;
 		protected JackPort							out, in;
 		protected int								sampleRate, bufferSize;
-		protected Queue<AudioInputStream>			outQueue	= new LinkedList<>();
+		protected LinkedList<AudioInputStream>		outQueue	= new LinkedList<>();
 		protected Queue<CircularBufferInputStream>	inQueue		= new LinkedList<>();
 
 		public JackAudio(JsonObject config) {
@@ -185,6 +213,7 @@ public abstract class Audio {
 
 		@Override
 		public AudioInputStream normalListening() throws LineUnavailableException, IOException {
+			// TODO reduce buffer size
 			CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 4 * 8));
 			synchronized (inQueue) {
 				inQueue.add(in);
@@ -218,7 +247,9 @@ public abstract class Audio {
 			// Process in
 			synchronized (inQueue) {
 				byte[] inData = new byte[samples * 4];
-				in.getBuffer().get(inData);
+				ByteBuffer bb = in.getBuffer();
+				bb.get(inData);
+
 				inQueue.removeIf(out -> {
 					CircularByteBuffer b = out.getBuffer();
 					if (b == null)
@@ -234,13 +265,17 @@ public abstract class Audio {
 					// TODO cache all buffers
 					byte[] buffer = new byte[samples * 4];
 					ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
+					byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
 					FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-					boolean first = true;
-					for (AudioInputStream stream : outQueue) {
+					for (int j = 0; j < outQueue.size(); j++) {
+						boolean first = j == 0;
+						AudioInputStream stream = outQueue.get(j);
 						try {
 							int read = stream.read(buffer, 0, samples * 4);
-							for (int i = 0; i < read / 4; i++) // TODO if the first stream does not read all samples, this will fail
-								outData.put(i, (first ? 0 : outData.get(i)) + floatBuffer.get(i));
+							for (int i = 0; i < samples; i++) {
+								boolean done = i >= read / 4;
+								outData.put(i, (first ? 0 : outData.get(i)) + (done ? 0 : floatBuffer.get(i)));
+							}
 							if (read < samples * 4) {
 								stream.close();
 								synchronized (stream) {
@@ -252,7 +287,6 @@ public abstract class Audio {
 							// TODO exception handling
 							e.printStackTrace();
 						}
-						first = false;
 					}
 				} else {
 					// TODO only write this one time
@@ -265,8 +299,7 @@ public abstract class Audio {
 		@Override
 		public void sampleRateChanged(JackClient client, int sampleRate) {
 			if (client == JackAudio.this.client) {
-				// format = new AudioFormat(sampleRate, 16, 1, true, false);
-				format = new AudioFormat(Encoding.PCM_FLOAT, sampleRate, 32, 1, 4, sampleRate, true);
+				format = new AudioFormat(Encoding.PCM_FLOAT, sampleRate, 32, 1, 4, sampleRate, false);
 				this.sampleRate = sampleRate;
 			}
 		}

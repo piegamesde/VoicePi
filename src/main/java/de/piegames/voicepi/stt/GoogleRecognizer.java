@@ -1,18 +1,30 @@
 package de.piegames.voicepi.stt;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-
-import com.google.cloud.speech.v1p1beta1.*;
+import javax.sound.sampled.AudioFileFormat.Type;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
+import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
+import com.google.cloud.speech.v1p1beta1.RecognizeResponse;
+import com.google.cloud.speech.v1p1beta1.SpeechClient;
+import com.google.cloud.speech.v1p1beta1.SpeechContext;
+import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
+import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.audio.Audio;
-
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.LineUnavailableException;
 
 public class GoogleRecognizer extends SpeechRecognizer {
 
@@ -22,6 +34,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 
 	@Override
 	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		super.load(commandsSpoken, commands);
 	}
 
 	@Override
@@ -29,12 +42,20 @@ public class GoogleRecognizer extends SpeechRecognizer {
 		while (!Thread.currentThread().isInterrupted()) {
 			log.debug("Listening");
 			try {
-				byte[] fileData = Audio.readAllBytes(control.getAudio().listenCommand());
-				List<String> strres = syncRecognizeData(fileData);
-				this.commandsSpoken.offer(strres);
+				System.out.println("Start-----------------------------------------------");
+				AudioInputStream stream = control.getAudio().listenCommand();
+				byte[] fileData = Audio.readAllBytes(stream);
+				System.out.println("Done");
+				System.out.println(AudioSystem.write(
+						new AudioInputStream(new ByteArrayInputStream(fileData), stream.getFormat(), AudioSystem.NOT_SPECIFIED), Type.WAVE, new File("test.wav")));
+				// System.out.println(AudioSystem.write(control.getAudio().listenCommand(), Type.WAVE, new File("test.wav")));
+				Thread.sleep(1000);
+				System.out.println("Blubba");
+				// List<String> strres = syncRecognizeData(fileData);
+				// this.commandsSpoken.offer(strres);
 			} catch (Exception e) {
 				log.error("Could not analyze audio: ", e);
-				//e.printStackTrace();
+				// e.printStackTrace();
 			}
 		}
 		log.debug("Not listening anymore");
@@ -59,12 +80,13 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			ai = control.getAudio().listenCommand();
 			byte[] b = Audio.readAllBytes(ai);
 			return syncRecognizeData(b);
+			// TODO multi-catch?
 		} catch (LineUnavailableException e) {
 			log.error("Could not read from microphone input", e);
-			//e.printStackTrace();
+			// e.printStackTrace();
 		} catch (IOException e) {
 			log.error("Could not read from microphone input", e);
-			//e.printStackTrace();
+			// e.printStackTrace();
 		} catch (Exception e) {
 			log.error("Could not analyze microphone input", e);
 		}
@@ -87,7 +109,8 @@ public class GoogleRecognizer extends SpeechRecognizer {
 				.setEncoding(AudioEncoding.LINEAR16)
 				.setLanguageCode(control.getSettings().getLangCode())
 				.setSampleRateHertz(16000)
-				.setSpeechContexts(0, SpeechContext.newBuilder().addAllPhrases(control.getStateMachine().getAvailableCommands()))
+				// TODO don't use this when transcribing
+				.addSpeechContexts(SpeechContext.newBuilder().addAllPhrases(control.getStateMachine().getAvailableCommands()).build())
 				.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()
 				.setContent(audioBytes)

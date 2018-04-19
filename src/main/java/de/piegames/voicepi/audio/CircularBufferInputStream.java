@@ -34,6 +34,11 @@ public class CircularBufferInputStream extends InputStream {
 		buffer = null;
 	}
 
+	@Override
+	public int available() throws IOException {
+		return buffer.available();
+	}
+
 	/** Returns the {@link CircularByteBuffer} backing this input stream or {@code null} if the stream has been closed */
 	public CircularByteBuffer getBuffer() {
 		return buffer;
