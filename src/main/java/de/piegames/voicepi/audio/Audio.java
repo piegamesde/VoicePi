@@ -1,5 +1,6 @@
 package de.piegames.voicepi.audio;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -74,22 +75,21 @@ public abstract class Audio {
 		long startTime = System.currentTimeMillis();
 		System.out.println("Calibrating");
 		while (System.currentTimeMillis() - startTime < 1000)
-			wait.read(new byte[1024]);
+			wait.skip(1024);
 		System.out.println("Calibrated " + volume.average);
 		volume.stopCalibrating();
-		ToggleAudioInputStream toggle = new ToggleAudioInputStream(wait, stream.getFormat(), AudioSystem.NOT_SPECIFIED, true);
-		toggle.setDeaf(true);
+		// TODO use normal input streams
+		BufferedInputStream bin = new BufferedInputStream(wait, 1024 * 32);
+		ToggleAudioInputStream toggle = new ToggleAudioInputStream(new AudioInputStream(bin, stream.getFormat(), AudioSystem.NOT_SPECIFIED), stream.getFormat(), AudioSystem.NOT_SPECIFIED);
+		toggle.state.set(ToggleAudioInputStream.State.CUT_SILENCE);
 		volume.state.addListener((observable, oldVal, newVal) -> {
 			System.out.println(newVal + " (" + oldVal + ")");
 			if (newVal != State.QUIET && oldVal == State.QUIET)
-				toggle.setDeaf(false);
-			if (newVal == State.TIMEOUT || newVal == State.TOO_SHORT || (newVal == State.QUIET && oldVal != State.QUIET))
-				try {
-					System.out.println("close");
-					toggle.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				toggle.state.set(ToggleAudioInputStream.State.LISTENING);
+			if (newVal == State.TIMEOUT || newVal == State.TOO_SHORT || (newVal == State.QUIET && oldVal != State.QUIET)) {
+				System.out.println("close");
+				toggle.state.set(ToggleAudioInputStream.State.EOF);
+			}
 		});
 		return new Pair<AudioInputStream, VolumeSpeechDetector>(toggle, volume);
 	}
@@ -261,6 +261,7 @@ public abstract class Audio {
 					}
 				} else {
 					// TODO only write this one time
+					// TODO don't create a float[]
 					out.getFloatBuffer().put(new float[samples]);
 				}
 			}

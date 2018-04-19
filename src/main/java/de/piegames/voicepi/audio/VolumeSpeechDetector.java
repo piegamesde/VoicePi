@@ -6,7 +6,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 public class VolumeSpeechDetector {
 
 	static enum State {
-		QUIET, TOO_SHORT, TIMEOUT, SPEAKING, PAUSED_SPEAKING;
+		QUIET, TOO_SHORT, TIMEOUT, SPEAKING, STARTED_SPEAKING, PAUSED_SPEAKING;
 	}
 
 	protected int								minTime, timeoutTime, pauseTime;
@@ -33,13 +33,24 @@ public class VolumeSpeechDetector {
 		else
 			switch (writableState.get()) {
 				case QUIET:
-					if (rms > average * 2f) {
+					if (rms > average) {
 						System.out.println("Started speaking");
-						writableState.set(State.SPEAKING);
+						writableState.set(State.STARTED_SPEAKING);
 						timer = System.currentTimeMillis();
 					} else if (System.currentTimeMillis() - timer > timeoutTime) {
 						System.out.println("Timeout");
 						writableState.set(State.TIMEOUT);
+					}
+					break;
+				case STARTED_SPEAKING:
+					if (rms > average * 2f) {
+						System.out.println("Speaking");
+						writableState.set(State.SPEAKING);
+						timer = System.currentTimeMillis();
+					}
+					if (System.currentTimeMillis() - timer > minTime) {
+						writableState.set(State.TOO_SHORT);
+						System.out.println("Volume too low");
 					}
 					break;
 				case TIMEOUT:
@@ -49,7 +60,7 @@ public class VolumeSpeechDetector {
 					if (rms < average * 0.8f) {
 						if (System.currentTimeMillis() - timer < minTime) {
 							writableState.set(State.TOO_SHORT);
-							System.out.println("Too short command");
+							System.out.println("Command too short");
 						} else {
 							writableState.set(State.PAUSED_SPEAKING);
 							timer = System.currentTimeMillis();

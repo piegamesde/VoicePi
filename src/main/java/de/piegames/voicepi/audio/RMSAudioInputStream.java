@@ -9,7 +9,7 @@ import javax.sound.sampled.TargetDataLine;
 
 public class RMSAudioInputStream extends AudioInputStream {
 
-	protected VolumeSpeechDetector									volume;
+	protected VolumeSpeechDetector volume;
 
 	public RMSAudioInputStream(TargetDataLine line, VolumeSpeechDetector volume) {
 		super(line);
@@ -39,8 +39,16 @@ public class RMSAudioInputStream extends AudioInputStream {
 		return read;
 	}
 
+	protected byte[] buffer = new byte[4096];
+
 	@Override
 	public long skip(long n) throws IOException {
-		return read(new byte[(int) n]);
+		int skipped = 0;
+		while (n > 4096) {
+			skipped += read(buffer, 0, 4096);
+			n -= 4096;
+		}
+		skipped += read(buffer, 0, (int) n);
+		return skipped;
 	}
 }
