@@ -6,29 +6,19 @@ import java.util.Objects;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.TargetDataLine;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 
 public class RMSAudioInputStream extends AudioInputStream {
 
 	protected VolumeSpeechDetector									volume;
-	public final ReadOnlyObjectProperty<VolumeSpeechDetector.State>	state;
-	private ReadOnlyObjectWrapper<VolumeSpeechDetector.State>		writableState;
 
 	public RMSAudioInputStream(TargetDataLine line, VolumeSpeechDetector volume) {
 		super(line);
 		this.volume = Objects.requireNonNull(volume);
-		writableState = new ReadOnlyObjectWrapper<>(volume.getState());
-		writableState.bind(volume.state);
-		state = writableState.getReadOnlyProperty();
 	}
 
 	public RMSAudioInputStream(InputStream stream, AudioFormat format, long length, VolumeSpeechDetector volume) {
 		super(stream, format, length);
 		this.volume = Objects.requireNonNull(volume);
-		writableState = new ReadOnlyObjectWrapper<>(volume.getState());
-		writableState.bind(volume.state);
-		state = writableState.getReadOnlyProperty();
 	}
 
 	@Override
@@ -45,6 +35,12 @@ public class RMSAudioInputStream extends AudioInputStream {
 		}
 		rms = (float) Math.sqrt(rms / (read / 2));
 		volume.onSample(rms);
+
 		return read;
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
+		return read(new byte[(int) n]);
 	}
 }

@@ -33,7 +33,7 @@ import com.google.api.client.util.IOUtils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import de.piegames.voicepi.audio.VolumeSpeechDetector.State;
-import javafx.beans.value.ChangeListener;
+import javafx.util.Pair;
 
 public abstract class Audio {
 
@@ -42,7 +42,6 @@ public abstract class Audio {
 	// public static final AudioFormat FORMAT = new AudioFormat(48000, 16, 1, true, false);
 
 	protected AudioFormat			format;
-	protected VolumeSpeechDetector	volume;
 
 	public Audio(JsonObject config) {
 		this.format = new AudioFormat(
@@ -52,7 +51,6 @@ public abstract class Audio {
 				Optional.ofNullable(config.getAsJsonPrimitive("signed")).map(JsonPrimitive::getAsBoolean).orElse(true),
 				Optional.ofNullable(config.getAsJsonPrimitive("big-endian")).map(JsonPrimitive::getAsBoolean).orElse(false));
 		// TODO configure
-		this.volume = new VolumeSpeechDetector(300, 750);
 	}
 
 	/**
@@ -63,54 +61,29 @@ public abstract class Audio {
 	public abstract AudioInputStream normalListening() throws LineUnavailableException, IOException;
 
 	/**
-	 * This will start listening until a command was spoken or {@code timeout} seconds passed
-	 *
-	 * @throws LineUnavailableException
-	 * @throws IOException
-	 */
-	@Deprecated
-	protected AudioInputStream activeListening(int timeout) throws LineUnavailableException, IOException {
-		RMSAudioInputStream rms = new RMSAudioInputStream(normalListening(),
-				Audio.FORMAT,
-				AudioSystem.NOT_SPECIFIED,
-				volume);
-		// TODO make the volume safe to multiple concurrent listeners
-		volume.startSpeaking();
-		rms.state.addListener((ChangeListener<State>) (observable, oldValue, newValue) -> {
-			if (newValue == State.QUIET)
-				try {
-					rms.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-		});
-		return rms;
-	}
-
-	/**
 	 * This will wait until a command gets spoken, then return and automatically stop listening once the command is over
 	 *
 	 * @throws LineUnavailableException
 	 * @throws IOException
 	 */
-	public AudioInputStream listenCommand() throws LineUnavailableException, IOException {
+	public Pair<AudioInputStream, VolumeSpeechDetector> listenCommand() throws LineUnavailableException, IOException {
 		// TODO optimize this all, cache buffers, make constants settings
 		AudioInputStream stream = normalListening();
-		VolumeSpeechDetector volume = new VolumeSpeechDetector(0, 750);
+		VolumeSpeechDetector volume = new VolumeSpeechDetector(250, 10000, 800);
 		RMSAudioInputStream wait = new RMSAudioInputStream(stream, stream.getFormat(), AudioSystem.NOT_SPECIFIED, volume);
 		long startTime = System.currentTimeMillis();
 		System.out.println("Calibrating");
 		while (System.currentTimeMillis() - startTime < 1000)
 			wait.read(new byte[1024]);
 		System.out.println("Calibrated " + volume.average);
-		volume.lockVolume();
+		volume.stopCalibrating();
 		ToggleAudioInputStream toggle = new ToggleAudioInputStream(wait, stream.getFormat(), AudioSystem.NOT_SPECIFIED, true);
 		toggle.setDeaf(true);
-		wait.state.addListener((observable, oldVal, newVal) -> {
+		volume.state.addListener((observable, oldVal, newVal) -> {
 			System.out.println(newVal + " (" + oldVal + ")");
 			if (newVal != State.QUIET && oldVal == State.QUIET)
 				toggle.setDeaf(false);
-			if (newVal == State.QUIET && oldVal != State.QUIET)
+			if (newVal == State.TIMEOUT || newVal == State.TOO_SHORT || (newVal == State.QUIET && oldVal != State.QUIET))
 				try {
 					System.out.println("close");
 					toggle.close();
@@ -118,7 +91,7 @@ public abstract class Audio {
 					e.printStackTrace();
 				}
 		});
-		return new RMSAudioInputStream(stream, FORMAT, AudioSystem.NOT_SPECIFIED, volume);
+		return new Pair<AudioInputStream, VolumeSpeechDetector>(toggle, volume);
 	}
 
 	public abstract void play(AudioInputStream stream) throws LineUnavailableException, IOException, InterruptedException;
@@ -214,7 +187,7 @@ public abstract class Audio {
 		@Override
 		public AudioInputStream normalListening() throws LineUnavailableException, IOException {
 			// TODO reduce buffer size
-			CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 4 * 8));
+			CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 8));
 			synchronized (inQueue) {
 				inQueue.add(in);
 			}
@@ -242,19 +215,21 @@ public abstract class Audio {
 			}
 		}
 
+		private byte[]		buffer;
+		private ByteBuffer	byteBuffer;
+		private FloatBuffer	floatBuffer;
+
 		@Override
 		public boolean process(JackClient client, int samples) {
 			// Process in
 			synchronized (inQueue) {
-				byte[] inData = new byte[samples * 4];
 				ByteBuffer bb = in.getBuffer();
-				bb.get(inData);
-
+				bb.get(buffer);
 				inQueue.removeIf(out -> {
 					CircularByteBuffer b = out.getBuffer();
 					if (b == null)
 						return true;
-					b.put(inData);
+					b.put(buffer);
 					return false;
 				});
 			}
@@ -263,10 +238,6 @@ public abstract class Audio {
 				if (!outQueue.isEmpty()) {
 					FloatBuffer outData = out.getFloatBuffer();
 					// TODO cache all buffers
-					byte[] buffer = new byte[samples * 4];
-					ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
-					byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-					FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
 					for (int j = 0; j < outQueue.size(); j++) {
 						boolean first = j == 0;
 						AudioInputStream stream = outQueue.get(j);
@@ -307,7 +278,12 @@ public abstract class Audio {
 		@Override
 		public void buffersizeChanged(JackClient client, int bufferSize) {
 			if (client == JackAudio.this.client) {
+				bufferSize *= 4;
 				this.bufferSize = bufferSize;
+				buffer = new byte[bufferSize];
+				byteBuffer = ByteBuffer.wrap(buffer);
+				byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+				floatBuffer = byteBuffer.asFloatBuffer();
 			}
 		}
 
