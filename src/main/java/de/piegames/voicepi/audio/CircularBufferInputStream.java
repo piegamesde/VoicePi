@@ -3,7 +3,6 @@ package de.piegames.voicepi.audio;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
-import org.greenrobot.essentials.io.CircularByteBuffer;
 
 public class CircularBufferInputStream extends InputStream {
 
@@ -30,7 +29,7 @@ public class CircularBufferInputStream extends InputStream {
 	@Override
 	public void close() throws IOException {
 		if (buffer != null)
-			buffer.free();
+			buffer.clear();
 		buffer = null;
 	}
 

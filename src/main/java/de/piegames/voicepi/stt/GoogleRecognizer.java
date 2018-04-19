@@ -22,9 +22,6 @@ import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import de.piegames.voicepi.VoicePi;
-import de.piegames.voicepi.audio.Audio;
-import de.piegames.voicepi.audio.VolumeSpeechDetector;
-import javafx.util.Pair;
 
 public class GoogleRecognizer extends SpeechRecognizer {
 
@@ -43,16 +40,22 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			log.debug("Listening");
 			try {
 				System.out.println("Start-------------------------------------------");
-				Pair<AudioInputStream, VolumeSpeechDetector> result = control.getAudio().listenCommand();
-				AudioInputStream stream = result.getKey();
-				byte[] fileData = Audio.readAllBytes(stream);
+				// Pair<AudioInputStream, VolumeSpeechDetector> result = control.getAudio().listenCommand();
+				// AudioInputStream stream = result.getKey();
+				// byte[] fileData = Audio.readAllBytes(stream);
+				// // System.out.println("Done");
+				// if (result.getValue().aborted()) {
+				// System.out.println("NOPE!");
+				// continue;
+				// }
+				byte[] fileData = control.getAudio().listenCommand();
 				// System.out.println("Done");
-				if (result.getValue().aborted()) {
+				if (fileData == null) {
 					System.out.println("NOPE!");
 					continue;
 				}
 				control.getAudio().play(
-						new AudioInputStream(new ByteArrayInputStream(fileData), stream.getFormat(), AudioSystem.NOT_SPECIFIED));
+						new AudioInputStream(new ByteArrayInputStream(fileData), control.getAudio().getListeningFormat(), AudioSystem.NOT_SPECIFIED));
 				// System.out.println(AudioSystem.write(
 				// new AudioInputStream(new ByteArrayInputStream(fileData), stream.getFormat(), AudioSystem.NOT_SPECIFIED), Type.WAVE, new File("test.wav")));
 				// System.out.println(AudioSystem.write(control.getAudio().listenCommand(), Type.WAVE, new File("test.wav")));
@@ -85,8 +88,8 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	public List<String> transcribe() {
 		AudioInputStream ai = null;
 		try {
-			ai = control.getAudio().listenCommand().getKey();
-			byte[] b = Audio.readAllBytes(ai);
+			// TODO may be null
+			byte[] b = control.getAudio().listenCommand();
 			return syncRecognizeData(b);
 			// TODO multi-catch?
 		} catch (LineUnavailableException e) {

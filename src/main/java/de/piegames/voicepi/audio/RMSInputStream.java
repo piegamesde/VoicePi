@@ -1,29 +1,25 @@
 package de.piegames.voicepi.audio;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.TargetDataLine;
 
-public class RMSAudioInputStream extends AudioInputStream {
+public class RMSInputStream extends FilterInputStream {
 
-	protected VolumeSpeechDetector volume;
+	protected final AudioFormat				format;
+	protected final VolumeSpeechDetector	volume;
 
-	public RMSAudioInputStream(TargetDataLine line, VolumeSpeechDetector volume) {
-		super(line);
-		this.volume = Objects.requireNonNull(volume);
-	}
-
-	public RMSAudioInputStream(InputStream stream, AudioFormat format, long length, VolumeSpeechDetector volume) {
-		super(stream, format, length);
+	public RMSInputStream(InputStream stream, AudioFormat format, VolumeSpeechDetector volume) {
+		super(stream);
+		this.format = Objects.requireNonNull(format);
 		this.volume = Objects.requireNonNull(volume);
 	}
 
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
-		int read = super.read(b, off, len);
+		int read = in.read(b, off, len);
 		if (read < 1)
 			return read;
 		float rms = 0;
@@ -32,6 +28,7 @@ public class RMSAudioInputStream extends AudioInputStream {
 			sample |= b[i++] & 0xFF; // (reverse these two lines
 			sample |= b[i++] << 8; // if the format is big endian)
 			rms += (sample / 32768f) * (sample / 32768f);
+			// System.out.println(sample / 32768f);
 		}
 		rms = (float) Math.sqrt(rms / (read / 2));
 		volume.onSample(rms);
@@ -50,5 +47,10 @@ public class RMSAudioInputStream extends AudioInputStream {
 		}
 		skipped += read(buffer, 0, (int) n);
 		return skipped;
+	}
+
+	@Override
+	public int read() throws IOException {
+		throw new UnsupportedOperationException("You cannot read only one byte on audio data");
 	}
 }
