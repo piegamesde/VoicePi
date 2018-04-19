@@ -33,7 +33,11 @@ public class VolumeSpeechDetector {
 		else
 			switch (writableState.get()) {
 				case QUIET:
-					if (rms > average) {
+					if (rms > average * 2) {
+						System.out.println("Speaking");
+						writableState.set(State.SPEAKING);
+						timer = System.currentTimeMillis();
+					} else if (rms > average) {
 						System.out.println("Started speaking");
 						writableState.set(State.STARTED_SPEAKING);
 						timer = System.currentTimeMillis();
