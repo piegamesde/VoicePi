@@ -11,7 +11,6 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.LineUnavailableException;
 import org.jaudiolibs.jnajack.Jack;
 import org.jaudiolibs.jnajack.JackBufferSizeCallback;
 import org.jaudiolibs.jnajack.JackClient;
@@ -39,23 +38,31 @@ public class JackAudio extends Audio implements JackProcessCallback, JackSampleR
 	}
 
 	@Override
-	public void init() throws JackException {
-		Jack jack = Jack.getInstance();
-		client = jack.openClient("VoicePi", EnumSet.noneOf(JackOptions.class), EnumSet.noneOf(JackStatus.class));
-		in = client.registerPort("in", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsInput));
-		out = client.registerPort("out", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsOutput));
-		client.setSampleRateCallback(this);
-		client.setProcessCallback(this);
-		client.setBuffersizeCallback(this);
-		client.activate();
-		sampleRateChanged(client, client.getSampleRate());
-		buffersizeChanged(client, client.getBufferSize());
-		client.transportStart();
+	public void init() throws IOException {
+		try {
+			Jack jack = Jack.getInstance();
+			client = jack.openClient("VoicePi", EnumSet.noneOf(JackOptions.class), EnumSet.noneOf(JackStatus.class));
+			in = client.registerPort("in", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsInput));
+			out = client.registerPort("out", JackPortType.AUDIO, EnumSet.of(JackPortFlags.JackPortIsOutput));
+			client.setSampleRateCallback(this);
+			client.setProcessCallback(this);
+			client.setBuffersizeCallback(this);
+			client.activate();
+			sampleRateChanged(client, client.getSampleRate());
+			buffersizeChanged(client, client.getBufferSize());
+			client.transportStart();
+		} catch (JackException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
-	public void close() throws JackException, IOException {
-		client.transportStop();
+	public void close() throws IOException {
+		try {
+			client.transportStop();
+		} catch (JackException e) {
+			throw new IOException(e);
+		}
 		client.deactivate();
 		synchronized (outQueue) {
 			for (AudioInputStream in : outQueue)
@@ -72,21 +79,19 @@ public class JackAudio extends Audio implements JackProcessCallback, JackSampleR
 	}
 
 	@Override
-	public AudioInputStream normalListening() throws LineUnavailableException, IOException {
-		// TODO reduce buffer size
-		CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 256));
+	public AudioInputStream normalListening(AudioFormat targetEncoding) throws IOException {
+		CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 128));
 		synchronized (inQueue) {
 			inQueue.add(in);
 		}
 		AudioInputStream audio = new AudioInputStream(in, format, AudioSystem.NOT_SPECIFIED);
-		// audio = formatStream(audio);
+		audio = formatStream(audio, targetEncoding);
 		return audio;
 	}
 
 	@Override
-	public CircularBufferInputStream normalListening2() throws LineUnavailableException, IOException {
-		// TODO reduce buffer size
-		CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(bufferSize * 256));
+	public CircularBufferInputStream normalListening2() throws IOException {
+		CircularBufferInputStream in = new CircularBufferInputStream(new CircularByteBuffer(getCommandBufferSize()));
 		synchronized (inQueue) {
 			inQueue.add(in);
 		}
@@ -152,8 +157,16 @@ public class JackAudio extends Audio implements JackProcessCallback, JackSampleR
 							}
 						}
 					} catch (IOException e) {
-						// TODO exception handling
-						e.printStackTrace();
+						log.warn("Could not play audio", e);
+						try {
+							stream.close();
+						} catch (IOException e1) {
+							log.warn("Could not even close the stream that could not play audio", e);
+						}
+						synchronized (stream) {
+							System.out.println("Notify " + stream);
+							stream.notifyAll();
+						}
 					}
 				}
 			} else {
@@ -170,6 +183,7 @@ public class JackAudio extends Audio implements JackProcessCallback, JackSampleR
 		if (client == JackAudio.this.client) {
 			format = new AudioFormat(Encoding.PCM_FLOAT, sampleRate, 32, 1, 4, sampleRate, false);
 			this.sampleRate = sampleRate;
+			log.debug("Setting new audio format: " + format + " Buffer size: " + getCommandBufferSize());
 		}
 	}
 

@@ -17,7 +17,6 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.jaudiolibs.jnajack.JackException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
@@ -165,7 +164,7 @@ public class VoicePi implements Runnable {
 		if (audio != null)
 			try {
 				audio.close();
-			} catch (JackException | IOException e2) {
+			} catch (IOException e2) {
 				log.warn("Could not close audio", e2);
 			}
 		modules.values().forEach(Module::close);
@@ -215,7 +214,7 @@ public class VoicePi implements Runnable {
 				audio = config.loadAudioFromConfig();
 			try {
 				audio.init();
-			} catch (JackException e) {
+			} catch (IOException e) {
 				log.error("Could not initialize audio", e);
 				audio = null;
 			}

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.LineUnavailableException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonElement;
@@ -62,7 +61,7 @@ public abstract class SpeechEngine {
 		try {
 			control.getAudio().play(ais);
 			return true;
-		} catch (IOException | LineUnavailableException | InterruptedException e) {
+		} catch (IOException e) {
 			log.warn("Could not speak text: ", e);
 			return false;
 		}

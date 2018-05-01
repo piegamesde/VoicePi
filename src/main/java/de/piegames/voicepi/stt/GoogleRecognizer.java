@@ -22,6 +22,7 @@ import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.audio.Audio;
 
 public class GoogleRecognizer extends SpeechRecognizer {
 
@@ -48,22 +49,23 @@ public class GoogleRecognizer extends SpeechRecognizer {
 				// System.out.println("NOPE!");
 				// continue;
 				// }
-				byte[] fileData = control.getAudio().listenCommand();
+				AudioInputStream in = control.getAudio().listenCommand(Audio.FORMAT);
 				// System.out.println("Done");
-				if (fileData == null) {
+				if (in == null) {
 					System.out.println("NOPE!");
 					continue;
 				}
+				byte[] fileData = Audio.readAllBytes(in);
 				control.getAudio().play(
-						new AudioInputStream(new ByteArrayInputStream(fileData), control.getAudio().getListeningFormat(), AudioSystem.NOT_SPECIFIED));
+						new AudioInputStream(new ByteArrayInputStream(fileData), Audio.FORMAT, AudioSystem.NOT_SPECIFIED));
 				// System.out.println(AudioSystem.write(
 				// new AudioInputStream(new ByteArrayInputStream(fileData), stream.getFormat(), AudioSystem.NOT_SPECIFIED), Type.WAVE, new File("test.wav")));
 				// System.out.println(AudioSystem.write(control.getAudio().listenCommand(), Type.WAVE, new File("test.wav")));
 				// Thread.sleep(1000);
 				// System.out.println("Blubba");
 
-				// List<String> strres = syncRecognizeData(fileData);
-				// this.commandsSpoken.offer(strres);
+				List<String> strres = syncRecognizeData(fileData);
+				this.commandsSpoken.offer(strres);
 			} catch (Exception e) {
 				log.error("Could not analyze audio: ", e);
 				// e.printStackTrace();
@@ -86,10 +88,9 @@ public class GoogleRecognizer extends SpeechRecognizer {
 
 	@Override
 	public List<String> transcribe() {
-		AudioInputStream ai = null;
 		try {
 			// TODO may be null
-			byte[] b = control.getAudio().listenCommand();
+			byte[] b = Audio.readAllBytes(control.getAudio().listenCommand(Audio.FORMAT));
 			return syncRecognizeData(b);
 			// TODO multi-catch?
 		} catch (LineUnavailableException e) {

@@ -1,14 +1,17 @@
 package de.piegames.voicepi.audio;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Optional;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.LineUnavailableException;
-import org.jaudiolibs.jnajack.JackException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import com.google.api.client.util.IOUtils;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import de.piegames.voicepi.audio.VolumeSpeechDetector.State;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -16,34 +19,52 @@ import javafx.beans.property.SimpleIntegerProperty;
 public abstract class Audio {
 
 	/** The default format. It will be used for all audio processing and if possible for audio recording. */
-	public static final AudioFormat FORMAT = new AudioFormat(16000, 16, 1, true, false);
+	public static final AudioFormat	FORMAT	= new AudioFormat(16000, 16, 1, true, false);
 
-	public Audio(JsonObject config) {// TODO configure
+	protected final Log				log		= LogFactory.getLog(getClass());
+	protected float					bufferSize;
+
+	public Audio(JsonObject config) {
+		bufferSize = Optional.ofNullable(config.getAsJsonPrimitive("command-buffer-size")).map(JsonPrimitive::getAsFloat).orElse(10f);
 	}
 
 	/**
-	 * This will start listening until the returned {@code AudioInputStream} is closed
+	 * Start listening until the returned {@code AudioInputStream} is closed. The resulting AudioInputStream will have the format specified by
+	 * {@code targetFormat}
 	 *
-	 * @throws IOException
+	 * @param targetFormat the target audio format for the resulting AudioInputStream.
+	 * @throws IOException if something goes wrong
 	 */
-	public abstract AudioInputStream normalListening() throws LineUnavailableException, IOException;
-
-	public abstract CircularBufferInputStream normalListening2() throws LineUnavailableException, IOException;
+	public abstract AudioInputStream normalListening(AudioFormat targetFormat) throws IOException;
 
 	/**
-	 * This will wait until a command gets spoken, then return and automatically stop listening once the command is over
+	 * Start listening until the returned {@link AudioInputStream} is closed. The resulting AudioInputStream will have the format specified by
+	 * {@code #getListeningFormat()}. The returned stream will be backed by a {@link CircularByteBuffer}. If the buffer is full, it will overwrite the least
+	 * recent audio data without blocking. If the buffer is empty, it will block and wait until some audio data is available. The buffer will be large enough to
+	 * fit {@link #bufferSize} seconds of audio data.
 	 *
-	 * @throws LineUnavailableException
-	 * @throws IOException
+	 * @throws IOException if something goes wrong
 	 */
-	public byte[] listenCommand() throws IOException, LineUnavailableException {
+	public abstract CircularBufferInputStream normalListening2() throws IOException;
+
+	/**
+	 * This will wait until a command gets spoken, record all audio until the command is over, convert it to the target format and return.
+	 *
+	 * @param targetFormat the target audio format for the resulting AudioInputStream.
+	 * @return An AudioInputStream backed by a byte buffer containing the audio data of the spoken command in the specified audio format or {@code null} if no
+	 *         command was spoken.
+	 * @throws IOException if something goes wrong
+	 */
+	@SuppressWarnings("resource")
+	public AudioInputStream listenCommand(AudioFormat targetFormat) throws IOException {
 		IntegerProperty startIndex = new SimpleIntegerProperty();
 		IntegerProperty endIndex = new SimpleIntegerProperty();
+
 		CircularBufferInputStream stream = normalListening2();
 		CircularByteBuffer buffer = stream.getBuffer();
 		AudioInputStream stream2 = formatStream(new AudioInputStream(stream, getListeningFormat(), AudioSystem.NOT_SPECIFIED));
 		VolumeSpeechDetector volume = new VolumeSpeechDetector(250, 10000, 800);
-		RMSInputStream wait = new RMSInputStream(stream2, getListeningFormat(), volume);
+		RMSInputStream wait = new RMSInputStream(stream2, FORMAT, volume);
 
 		{ // Calibrating. This will listen for n milliseconds and calculate the average volume from it. This will be used as threshold later on
 			long startTime = System.currentTimeMillis();
@@ -52,7 +73,7 @@ public abstract class Audio {
 				wait.read(new byte[1024]); // TODO replace this by read
 			System.out.println("Calibrated " + volume.average);
 			volume.stopCalibrating();
-		}
+		} // TODO re-calibrate regularly if nothing is said
 		volume.state.addListener((observable, oldVal, newVal) -> {
 			if (oldVal == State.QUIET && (newVal == State.SPEAKING)) {
 				startIndex.set(buffer.getIndex());
@@ -72,20 +93,42 @@ public abstract class Audio {
 			return null;
 		int start = Math.floorMod(startIndex.get() - 10240, buffer.capacity());
 		int len = Math.floorMod(endIndex.get() - start, buffer.capacity());
-		byte[] ret = new byte[len];
-		buffer.getRaw(start, ret, 0, len);
+		byte[] data = new byte[len];
+		buffer.getRaw(start,
+				data, 0, len);
+		AudioInputStream ret = new AudioInputStream(new ByteArrayInputStream(data), getListeningFormat(), AudioSystem.NOT_SPECIFIED);
+		if (targetFormat != null)
+			ret = formatStream(ret, targetFormat);
 		return ret;
 	}
 
-	public abstract void play(AudioInputStream stream) throws LineUnavailableException, IOException, InterruptedException;
+	/**
+	 * Play the audio data from {@code stream} until it does not contain data anymore. This might be because it returns EOS, throws an Exception while reading
+	 * or reading a chunk does not return the chunk's size. If the current thread is interrupted, it will stop playing and return as soon as possible.
+	 *
+	 * @throws IOException if an error occurred while reading or playing the stream
+	 */
+	public abstract void play(AudioInputStream stream) throws IOException;
 
-	public void init() throws JackException {
+	/** Called to initialize all audio stuff required to operate */
+	public void init() throws IOException {
 	}
 
-	public void close() throws JackException, IOException {
+	/** Called to free all resources claimed by {@link #init()} */
+	public void close() throws IOException {
 	}
 
+	/**
+	 * This is the implementation's audio format used for recording any audio data. If requesting audio in a different format, it will probably be converted
+	 * before returning. If you do request another audio format (say, with a different encoding), try at least to keep this one's sample rate to avoid
+	 * resampling.
+	 */
 	public abstract AudioFormat getListeningFormat();
+
+	protected int getCommandBufferSize() {
+		AudioFormat format = getListeningFormat();
+		return (int) (bufferSize * format.getFrameRate() * format.getFrameSize());
+	}
 
 	public static AudioInputStream formatStream(AudioInputStream in) {
 		return formatStream(in, FORMAT);

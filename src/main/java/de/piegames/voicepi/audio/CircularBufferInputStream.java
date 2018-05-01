@@ -6,7 +6,7 @@ import java.util.Objects;
 
 public class CircularBufferInputStream extends InputStream {
 
-	protected CircularByteBuffer buffer;
+	protected CircularByteBuffer	buffer;
 
 	public CircularBufferInputStream(CircularByteBuffer buffer) {
 		this.buffer = Objects.requireNonNull(buffer);

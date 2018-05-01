@@ -20,7 +20,7 @@ public class SphinxSpeechRecognizer extends AbstractSpeechRecognizer {
 	}
 
 	public void startRecognition(boolean clear) throws LineUnavailableException, IOException {
-		AudioInputStream stream = in.normalListening();
+		AudioInputStream stream = in.normalListening(Audio.FORMAT);
 		inputStream = new ToggleAudioInputStream(stream, stream.getFormat(), AudioSystem.NOT_SPECIFIED);
 		// context.getInstance(StreamDataSource.class)
 		// .setInputStream(inputStream);

@@ -27,29 +27,39 @@ public class DefaultAudio extends Audio {
 	}
 
 	@Override
-	public AudioInputStream normalListening() throws LineUnavailableException {
-		TargetDataLine line = (TargetDataLine) AudioSystem.getLine(new DataLine.Info(TargetDataLine.class, format));
-		line.open(format);
-		line.start();
-		AudioInputStream stream = new AudioInputStream(line);
-		// stream = formatStream(stream);
-		return stream;
+	public AudioInputStream normalListening(AudioFormat targetEncoding) throws IOException {
+		try {
+			if (AudioSystem.isLineSupported(new DataLine.Info(TargetDataLine.class, targetEncoding))) {
+				TargetDataLine line = (TargetDataLine) AudioSystem.getLine(new DataLine.Info(TargetDataLine.class, targetEncoding));
+				line.open(format);
+				line.start();
+				AudioInputStream stream = new AudioInputStream(line);
+				return stream;
+			} else {
+				TargetDataLine line = (TargetDataLine) AudioSystem.getLine(new DataLine.Info(TargetDataLine.class, format));
+				line.open(format);
+				line.start();
+				AudioInputStream stream = new AudioInputStream(line);
+				stream = formatStream(stream, targetEncoding);
+				return stream;
+			}
+		} catch (LineUnavailableException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
-	public CircularBufferInputStream normalListening2() throws LineUnavailableException, IOException {
-		TargetDataLine line = (TargetDataLine) AudioSystem.getLine(new DataLine.Info(TargetDataLine.class, format));
-		line.open(format);
-		line.start();
-		CircularByteBuffer buffer = new CircularByteBuffer(1024 * 256);
+	public CircularBufferInputStream normalListening2() throws IOException {
+		AudioInputStream ain = normalListening(format);
+		CircularByteBuffer buffer = new CircularByteBuffer(getCommandBufferSize());
 		CircularBufferInputStream in = new CircularBufferInputStream(buffer) {
 
-			@Override 
-			public int read(byte[] src, int off, int len) {
+			@Override
+			public int read(byte[] src, int off, int len) throws IOException {
 				if (buffer == null)
 					return -1;
-				int read = line.read(src, off, len);
-				if (read < 1) 
+				int read = ain.read(src, off, len);
+				if (read < 1)
 					return read;
 				buffer.put(src, off, read);
 				buffer.skip(read);
@@ -58,9 +68,7 @@ public class DefaultAudio extends Audio {
 
 			@Override
 			public void close() throws IOException {
-				System.out.println("CLOSE");
-				line.stop();
-				line.close();
+				ain.close();
 				super.close();
 			}
 		};
@@ -68,19 +76,23 @@ public class DefaultAudio extends Audio {
 	}
 
 	@Override
-	public void play(AudioInputStream ais) throws LineUnavailableException, IOException {
+	public void play(AudioInputStream ais) throws IOException {
 		AudioFormat audioFormat = ais.getFormat();
-		SourceDataLine line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(SourceDataLine.class, audioFormat));
-		line.open(audioFormat);
-		line.start();
+		try {
+			SourceDataLine line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(SourceDataLine.class, audioFormat));
+			line.open(audioFormat);
+			line.start();
 
-		int count = 0;
-		byte[] data = new byte[65532];
-		while ((count = ais.read(data)) != -1)
-			line.write(data, 0, count);
+			int count = 0;
+			byte[] data = new byte[4096];
+			while ((count = ais.read(data)) != -1 && !Thread.interrupted())
+				line.write(data, 0, count);
 
-		line.drain();
-		line.close();
+			line.drain();
+			line.close();
+		} catch (LineUnavailableException e) {
+			throw new IOException(e);
+		}
 	}
 
 	@Override
