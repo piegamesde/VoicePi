@@ -6,6 +6,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import de.piegames.voicepi.audio.Audio;
 import de.piegames.voicepi.audio.ToggleAudioInputStream;
+import de.piegames.voicepi.audio.ToggleAudioInputStream.State;
 import edu.cmu.sphinx.api.AbstractSpeechRecognizer;
 import edu.cmu.sphinx.api.Configuration;
 
@@ -28,12 +29,16 @@ public class SphinxSpeechRecognizer extends AbstractSpeechRecognizer {
 		context.setSpeechSource(inputStream);
 	}
 
-	public void stopRecognition() throws IOException {
+	public void stopRecognition1() throws IOException {
+		inputStream.state.set(State.EOF);
 		inputStream.close();
+	}
+
+	public void stopRecognition2() throws IOException {
 		recognizer.deallocate();
 	}
 
 	public void setDeaf(boolean deaf) {
-		inputStream.setDeaf(deaf);
+		inputStream.state.set(deaf ? State.DEAF : State.LISTENING);
 	}
 }

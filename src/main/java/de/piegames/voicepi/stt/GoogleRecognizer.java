@@ -1,6 +1,5 @@
 package de.piegames.voicepi.stt;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,8 +8,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.LineUnavailableException;
 import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
@@ -41,34 +38,16 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			log.debug("Listening");
 			try {
 				System.out.println("Start-------------------------------------------");
-				// Pair<AudioInputStream, VolumeSpeechDetector> result = control.getAudio().listenCommand();
-				// AudioInputStream stream = result.getKey();
-				// byte[] fileData = Audio.readAllBytes(stream);
-				// // System.out.println("Done");
-				// if (result.getValue().aborted()) {
-				// System.out.println("NOPE!");
-				// continue;
-				// }
 				AudioInputStream in = control.getAudio().listenCommand(Audio.FORMAT);
-				// System.out.println("Done");
 				if (in == null) {
 					System.out.println("NOPE!");
 					continue;
 				}
 				byte[] fileData = Audio.readAllBytes(in);
-				control.getAudio().play(
-						new AudioInputStream(new ByteArrayInputStream(fileData), Audio.FORMAT, AudioSystem.NOT_SPECIFIED));
-				// System.out.println(AudioSystem.write(
-				// new AudioInputStream(new ByteArrayInputStream(fileData), stream.getFormat(), AudioSystem.NOT_SPECIFIED), Type.WAVE, new File("test.wav")));
-				// System.out.println(AudioSystem.write(control.getAudio().listenCommand(), Type.WAVE, new File("test.wav")));
-				// Thread.sleep(1000);
-				// System.out.println("Blubba");
-
 				List<String> strres = syncRecognizeData(fileData);
 				this.commandsSpoken.offer(strres);
 			} catch (Exception e) {
 				log.error("Could not analyze audio: ", e);
-				// e.printStackTrace();
 			}
 		}
 		log.debug("Not listening anymore");
@@ -90,15 +69,17 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	public List<String> transcribe() {
 		try {
 			// TODO may be null
-			byte[] b = Audio.readAllBytes(control.getAudio().listenCommand(Audio.FORMAT));
+			AudioInputStream in = control.getAudio().listenCommand(Audio.FORMAT);
+			// System.out.println("Done");
+			if (in == null) {
+				System.out.println("NOPE!");
+				return Collections.emptyList();
+			}
+			byte[] b = Audio.readAllBytes(in);
 			return syncRecognizeData(b);
 			// TODO multi-catch?
-		} catch (LineUnavailableException e) {
-			log.error("Could not read from microphone input", e);
-			// e.printStackTrace();
 		} catch (IOException e) {
 			log.error("Could not read from microphone input", e);
-			// e.printStackTrace();
 		} catch (Exception e) {
 			log.error("Could not analyze microphone input", e);
 		}

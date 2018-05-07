@@ -78,7 +78,7 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 		thread.interrupt();
 		Thread.yield();
 		try {
-			stt.stopRecognition();
+			stt.stopRecognition1();
 		} catch (IllegalStateException | IOException e) {
 			log.error("Could not stop voice recognition", e);
 		}
@@ -86,6 +86,11 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 			thread.join(10000);
 		} catch (InterruptedException e) {
 			log.warn("Could not make sure that the recognizer thread has finished", e);
+		}
+		try {
+			stt.stopRecognition2();
+		} catch (IllegalStateException | IOException e) {
+			log.error("Could not stop voice recognition", e);
 		}
 		thread = null;
 	}

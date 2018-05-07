@@ -30,6 +30,10 @@
 	"activation-commands": [
 		"RASPBERRY"
 	],
+	"audio": {
+		"class-name": "de.piegames.voicepi.audio.DefaultAudio",
+		"command-buffer-size": "10"
+	},
 	"tts": {
 		"class-name": "de.piegames.voicepi.tts.FreeSpeechEngine"
 	},

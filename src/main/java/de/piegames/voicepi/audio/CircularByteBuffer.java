@@ -16,6 +16,9 @@ package de.piegames.voicepi.audio;
  * All put&get methods are non-blocking.
  * <p/>
  * This class is thread-safe.
+ * <p/>
+ * This class got extended from the original source code to allow more direct access to the data: Raw reading of the buffer, getting/setting the current index
+ * and direct operations with buffers (TODO)
  */
 public class CircularByteBuffer {
 

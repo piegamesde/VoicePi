@@ -15,8 +15,7 @@ public class ToggleAudioInputStream extends AudioInputStream {
 		LISTENING, DEAF, CUT_SILENCE, EOF;
 	}
 
-	public final ObjectProperty<State>	state	= new SimpleObjectProperty<ToggleAudioInputStream.State>(State.LISTENING);
-	protected boolean					deaf, cutSilence;
+	public final ObjectProperty<State> state = new SimpleObjectProperty<ToggleAudioInputStream.State>(State.LISTENING);
 
 	public ToggleAudioInputStream(TargetDataLine line) {
 		super(line);
@@ -36,10 +35,10 @@ public class ToggleAudioInputStream extends AudioInputStream {
 		switch (state.get()) {
 			case LISTENING:
 				return super.read(b, off, len);
-			case DEAF:
+			case CUT_SILENCE:
 				int read = (int) super.skip(len);
 				return 0;
-			case CUT_SILENCE:
+			case DEAF:
 				read = (int) super.skip(len);
 				Arrays.fill(b, off, off + read, (byte) 0);
 				return read;

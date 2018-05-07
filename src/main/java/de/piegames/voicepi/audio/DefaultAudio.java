@@ -12,6 +12,7 @@ import javax.sound.sampled.TargetDataLine;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+/** Implements the {@link Audio} class using Java's javax.sound package which will use whatever is available on the current system. */
 public class DefaultAudio extends Audio {
 
 	protected AudioFormat format;

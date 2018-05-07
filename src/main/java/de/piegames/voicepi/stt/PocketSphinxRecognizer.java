@@ -37,6 +37,7 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 		log.debug("Language model path: " + lmPath.toAbsolutePath());
 
 		Gst.init();
+		// FIXME: this will fail after reloading for some reason
 		pipeline = Pipeline.launch("autoaudiosrc ! audioconvert !  audioresample ! pocketsphinx name=asr ! fakesink");
 		Element asr = pipeline.getElementByName("asr");
 		System.out.println(Arrays.toString(asr.listPropertyNames().toArray()));
@@ -73,6 +74,12 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 	}
 
 	@Override
+	public void startRecognition() {
+		super.startRecognition();
+		pipeline.play();
+	}
+
+	@Override
 	public void stopRecognition() {
 		pipeline.pause();
 		super.stopRecognition();
@@ -91,6 +98,7 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 
 	@Override
 	public void unload() {
+		super.unload();
 		pipeline.stop();
 		Gst.deinit();
 	}

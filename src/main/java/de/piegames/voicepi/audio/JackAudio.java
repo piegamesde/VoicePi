@@ -24,6 +24,11 @@ import org.jaudiolibs.jnajack.JackSampleRateCallback;
 import org.jaudiolibs.jnajack.JackStatus;
 import com.google.gson.JsonObject;
 
+/**
+ * Implements the {@link Audio} class using the system's JackAudio interface (through JNAJack bindings). This will require Jack to be installed and a Jack
+ * server to be running to work properly. When running, it will create a new Jack client with one input and one output. Use this if you want to hook VoicePi to
+ * something else than just mic+speakers, like other applications.
+ */
 public class JackAudio extends Audio implements JackProcessCallback, JackSampleRateCallback, JackBufferSizeCallback {
 
 	protected JackClient						client;
@@ -72,7 +77,9 @@ public class JackAudio extends Audio implements JackProcessCallback, JackSampleR
 		synchronized (inQueue) {
 			for (CircularBufferInputStream in : inQueue) {
 				in.close();
-				in.notifyAll();
+				synchronized (in) {
+					in.notifyAll();
+				}
 			}
 			inQueue.clear();
 		}

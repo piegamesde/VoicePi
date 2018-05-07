@@ -67,24 +67,17 @@ public class VoicePi implements Runnable {
 		log.debug("Available commands: " + stateMachine.getAvailableCommands());
 		while (!exit) {
 			try {
+				// TODO this will fail if the timeout is infinite and should be moved somewhere else
 				if (!notifications.isEmpty() && stateMachine.isIdle()) {
 					Thread.sleep(1000);
 					ContextState state = notifications.remove();
 					log.info("Push notification incoming: " + state);
 					stateMachine.current.set(state);
 				}
-				Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
-				if (spoken != null) {
-					onCommandSpoken(spoken);
-					log.debug("Current state: " + stateMachine.getCurrentState());
-					log.debug("Available commands: " + stateMachine.getAvailableCommands());
-				} else if (!stateMachine.isWaitingForActivation() && stateMachine.isActivationNeeded()) {
-					log.info("Timed out");
-					stt.deafenRecognition(true);
-					settings.onTimeout.execute(this, log, "onTimeout");
-					stateMachine.resetState();
-					stt.deafenRecognition(false);
-				}
+				if (stateMachine.isIdle())
+					listenFirstCommand();
+				else
+					listenCommand();
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
@@ -98,6 +91,32 @@ public class VoicePi implements Runnable {
 		}
 		log.debug("Quit main loop");
 		exitApplication();
+	}
+
+	// Listen to first command: no wrong commands
+	protected void listenFirstCommand() throws InterruptedException {
+		Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
+		if (spoken != null) {
+			onCommandSpoken(spoken);
+			log.debug("Current state: " + stateMachine.getCurrentState());
+			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+		}
+	}
+
+	// Listen to subsequent commands: potential timeout
+	protected void listenCommand() throws InterruptedException {
+		Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
+		if (spoken != null) {
+			onCommandSpoken(spoken);
+			log.debug("Current state: " + stateMachine.getCurrentState());
+			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+		} else {
+			log.info("Timed out");
+			stt.deafenRecognition(true);
+			settings.onTimeout.execute(this, log, "onTimeout");
+			stateMachine.resetState();
+			stt.deafenRecognition(false);
+		}
 	}
 
 	public void onCommandSpoken(String command) {
@@ -137,7 +156,8 @@ public class VoicePi implements Runnable {
 			settings.onCommandSpoken.execute(this, log, "onCommandSpoken");
 			// initialState: The state before this command was spoken and thus the state this command belongs to
 			responsible.onCommandSpoken(initialState, command);
-			stt.deafenRecognition(false);
+			if (!exit)
+				stt.deafenRecognition(false);
 		} else if (stateMachine.isActivationNeeded() && initialState == stateMachine.getStart()) {
 			log.info("You need to activate first");
 		} else {
@@ -154,21 +174,7 @@ public class VoicePi implements Runnable {
 
 		notifications.clear();
 		commandsSpoken = new LinkedBlockingQueue<>();
-		// Close modules
-		if (stt != null) {
-			stt.stopRecognition();
-			stt.unload();
-			stt = null;
-		}
-		tts = null;
-		if (audio != null)
-			try {
-				audio.close();
-			} catch (IOException e2) {
-				log.warn("Could not close audio", e2);
-			}
-		modules.values().forEach(Module::close);
-		modules.clear();
+		unload();
 
 		// Load config
 		try {
@@ -242,7 +248,7 @@ public class VoicePi implements Runnable {
 			try {
 				if (stt != null)
 					stt.load(commandsSpoken, commands);
-			} catch (IOException e) {
+			} catch (RuntimeException | IOException e) {
 				log.error("Could not load the speech recognition module; switching to DeafRecognizer", e);
 				stt = null;
 			}
@@ -263,18 +269,31 @@ public class VoicePi implements Runnable {
 		}
 	}
 
+	protected void unload() {
+		log.info("Unloading everything");
+		if (stt != null) {
+			stt.stopRecognition();
+			stt.unload();
+		}
+		tts = null;
+		if (audio != null)
+			try {
+				audio.close();
+			} catch (IOException e) {
+				log.fatal("Could not close all audio resources", e);
+			}
+		modules.values().forEach(Module::close);
+		modules.clear();
+	}
+
 	public void exitApplication() {
 		if (exit) // Application already stopped
 			return;
 		exit = true;
 
 		log.info("Stopping speech recognition");
-		if (stt != null) {
-			stt.stopRecognition();
-			stt.unload();
-		}
-		modules.values().forEach(Module::close);
 		settings.onExit.execute(this, log, "onExit");
+		unload();
 		log.info("Quitting application");
 	}
 

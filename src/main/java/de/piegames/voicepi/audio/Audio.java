@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -19,13 +20,24 @@ import javafx.beans.property.SimpleIntegerProperty;
 public abstract class Audio {
 
 	/** The default format. It will be used for all audio processing and if possible for audio recording. */
-	public static final AudioFormat	FORMAT	= new AudioFormat(16000, 16, 1, true, false);
+	public static final AudioFormat	FORMAT				= new AudioFormat(16000, 16, 1, true, false);
 
-	protected final Log				log		= LogFactory.getLog(getClass());
-	protected float					bufferSize;
+	protected final Log				log					= LogFactory.getLog(getClass());
+	protected float					commandBufferSize, minCommandLength, maxCommandPauseTime, timeoutTime, calibrationTime;
+	protected long					lastCalibrationTime	= 0;
+	protected float					calibratedAverage	= 1;
 
 	public Audio(JsonObject config) {
-		bufferSize = Optional.ofNullable(config.getAsJsonPrimitive("command-buffer-size")).map(JsonPrimitive::getAsFloat).orElse(10f);
+		commandBufferSize = Optional.ofNullable(config.getAsJsonPrimitive("command-buffer-size")).map(JsonPrimitive::getAsFloat).orElse(10f);
+		minCommandLength = Optional.ofNullable(config.getAsJsonPrimitive("min-command-length")).map(JsonPrimitive::getAsFloat).orElse(0.25f);
+		maxCommandPauseTime = Optional.ofNullable(config.getAsJsonPrimitive("max-command-pause-time")).map(JsonPrimitive::getAsFloat).orElse(0.8f);
+		timeoutTime = Optional.ofNullable(config.getAsJsonPrimitive("command-timeout-time")).map(JsonPrimitive::getAsFloat).orElse(10f);
+		calibrationTime = Optional.ofNullable(config.getAsJsonPrimitive("calibration-time")).map(JsonPrimitive::getAsFloat).orElse(1f);
+		if (commandBufferSize < 1) {
+			log.warn("Minimum command buffer size is 1s");
+			commandBufferSize = 1;
+		}
+		// TODO don't calibrate before each command
 	}
 
 	/**
@@ -41,7 +53,7 @@ public abstract class Audio {
 	 * Start listening until the returned {@link AudioInputStream} is closed. The resulting AudioInputStream will have the format specified by
 	 * {@code #getListeningFormat()}. The returned stream will be backed by a {@link CircularByteBuffer}. If the buffer is full, it will overwrite the least
 	 * recent audio data without blocking. If the buffer is empty, it will block and wait until some audio data is available. The buffer will be large enough to
-	 * fit {@link #bufferSize} seconds of audio data.
+	 * fit {@link #commandBufferSize} seconds of audio data.
 	 *
 	 * @throws IOException if something goes wrong
 	 */
@@ -62,24 +74,18 @@ public abstract class Audio {
 
 		CircularBufferInputStream stream = normalListening2();
 		CircularByteBuffer buffer = stream.getBuffer();
-		AudioInputStream stream2 = formatStream(new AudioInputStream(stream, getListeningFormat(), AudioSystem.NOT_SPECIFIED));
-		VolumeSpeechDetector volume = new VolumeSpeechDetector(250, 10000, 800);
-		RMSInputStream wait = new RMSInputStream(stream2, FORMAT, volume);
+		RMSInputStream wait = new RMSInputStream(stream, getListeningFormat(), null);
+		calibrate(wait);
+		VolumeSpeechDetector volume = new VolumeSpeechDetector(calibratedAverage, (int) (minCommandLength * 1000f), (int) (timeoutTime * 1000f), (int) (maxCommandPauseTime * 1000f), (int) ((commandBufferSize - 0.5f) * 1000f));
+		wait.callback.set(volume);
 
-		{ // Calibrating. This will listen for n milliseconds and calculate the average volume from it. This will be used as threshold later on
-			long startTime = System.currentTimeMillis();
-			System.out.println("Calibrating");
-			while (System.currentTimeMillis() - startTime < 1000)
-				wait.read(new byte[1024]); // TODO replace this by read
-			System.out.println("Calibrated " + volume.average);
-			volume.stopCalibrating();
-		} // TODO re-calibrate regularly if nothing is said
 		volume.state.addListener((observable, oldVal, newVal) -> {
-			if (oldVal == State.QUIET && (newVal == State.SPEAKING)) {
+			if (oldVal == State.QUIET && (newVal == State.SPEAKING || newVal == State.STARTED_SPEAKING)) {
 				startIndex.set(buffer.getIndex());
 			}
 			if (newVal == State.TIMEOUT || newVal == State.TOO_SHORT || (newVal == State.QUIET && oldVal != State.QUIET)) {
 				try {
+					System.out.println("Closing stream because of " + newVal);
 					endIndex.set(buffer.getIndex());
 					wait.close();
 				} catch (IOException e) {
@@ -89,9 +95,10 @@ public abstract class Audio {
 		});
 		while (wait.read(new byte[1024]) != -1)
 			;
+		System.out.println(volume.getState() + " " + volume.aborted());
 		if (volume.aborted())
 			return null;
-		int start = Math.floorMod(startIndex.get() - 10240, buffer.capacity());
+		int start = Math.floorMod(startIndex.get() - secondsToBytes(getListeningFormat(), 0.5f), buffer.capacity());
 		int len = Math.floorMod(endIndex.get() - start, buffer.capacity());
 		byte[] data = new byte[len];
 		buffer.getRaw(start,
@@ -100,6 +107,32 @@ public abstract class Audio {
 		if (targetFormat != null)
 			ret = formatStream(ret, targetFormat);
 		return ret;
+	}
+
+	/** This will listen for n milliseconds and calculate the average volume from it. This will be used as threshold later on */
+	protected void calibrate(RMSInputStream rmsIn) throws IOException {
+		if (System.currentTimeMillis() - lastCalibrationTime < (commandBufferSize * 1000f))
+			return;
+		class AverageConsumer implements Consumer<Float> {
+
+			float	sum		= 0f;
+			int		count	= 0;
+
+			@Override
+			public void accept(Float t) {
+				sum += t;
+				count++;
+			}
+		}
+		AverageConsumer c = new AverageConsumer();
+		rmsIn.callback.set(c);
+		long startTime = System.currentTimeMillis();
+		System.out.println("Calibrating");
+		while (System.currentTimeMillis() - startTime < calibrationTime * 1000)
+			rmsIn.read(new byte[1024]);
+		calibratedAverage = c.sum / c.count;
+		System.out.println("Calibrated " + calibratedAverage);
+		lastCalibrationTime = (long) (startTime + calibrationTime * 1000);
 	}
 
 	/**
@@ -126,8 +159,12 @@ public abstract class Audio {
 	public abstract AudioFormat getListeningFormat();
 
 	protected int getCommandBufferSize() {
-		AudioFormat format = getListeningFormat();
-		return (int) (bufferSize * format.getFrameRate() * format.getFrameSize());
+		return secondsToBytes(getListeningFormat(), commandBufferSize);
+	}
+
+	/** Calculates the amount of bytes needed to store n seconds of audio data in the given audio format */
+	public static int secondsToBytes(AudioFormat format, float seconds) {
+		return (int) (seconds * format.getFrameRate() * format.getFrameSize());
 	}
 
 	public static AudioInputStream formatStream(AudioInputStream in) {

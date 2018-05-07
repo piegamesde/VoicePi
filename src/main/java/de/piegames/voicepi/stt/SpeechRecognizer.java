@@ -1,7 +1,6 @@
 package de.piegames.voicepi.stt;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -10,7 +9,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
 
@@ -32,7 +30,7 @@ import de.piegames.voicepi.VoicePi;
  */
 public abstract class SpeechRecognizer implements Runnable {
 
-	protected final Log							log			= LogFactory.getLog(getClass());
+	protected final Log							log	= LogFactory.getLog(getClass());
 	protected JsonObject						config;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected Thread							thread;
@@ -44,10 +42,9 @@ public abstract class SpeechRecognizer implements Runnable {
 		this.control = control;
 	}
 
-
 	/**
 	 * This will be called on startup to load all the necessary data to perform STT.
-	 * 
+	 *
 	 * @param commandsSpoken a {@link BlockingQueue} where to put all commands that got recognized. {@link VoicePi} will take them from the queue and process
 	 *            them. The queue is not size limited and will never block while adding items to it.
 	 * @param commands a set of commands that got registered by the modules. If the STT is using a finite vocabulary, this is it. If the STT works with
@@ -70,6 +67,7 @@ public abstract class SpeechRecognizer implements Runnable {
 	public void startRecognition() {
 		log.debug("Starting " + getClass().getSimpleName());
 		thread = new Thread(this);
+		thread.setName(getClass().getSimpleName() + " listening thread");
 		thread.start();
 	}
 
@@ -125,6 +123,7 @@ public abstract class SpeechRecognizer implements Runnable {
 
 	/** Unloads and releases all resources. The object won't be used after this method has been called. */
 	public void unload() {
+		log.debug("Unloading " + getClass().getSimpleName());
 		commandsSpoken = null;
 	}
 }
