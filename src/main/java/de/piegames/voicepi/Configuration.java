@@ -32,8 +32,7 @@ import de.piegames.voicepi.tts.SpeechEngine;
  * {@code customXXX} fields. It only returns the newly created object.
  */
 public class Configuration {
-    // TODO catch all NullPointerExc, eg. the config file is incorrect
-
+	// TODO catch all NullPointerExc, eg. the config file is incorrect
 
 	protected final Log				log	= LogFactory.getLog(getClass());
 
@@ -139,11 +138,11 @@ public class Configuration {
 		return ret;
 	}
 
-	public SpeechRecognizer loadSTTFromConfig(VoicePi control) {
+	public SpeechRecognizer loadSTTFromConfig() {
 		try {
 			return (SpeechRecognizer) Class.forName(sttConfig.getAsJsonPrimitive("class-name").getAsString())
-					.getConstructor(VoicePi.class, JsonObject.class)
-					.newInstance(control, sttConfig);
+					.getConstructor(JsonObject.class)
+					.newInstance(sttConfig);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.warn("Could not instantiate speech recognizer as specified in the config file", e);
 			return null;

@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import com.google.common.base.Joiner;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 import javafx.beans.property.ObjectProperty;
@@ -65,6 +66,7 @@ public class VoiceState {
 		nodes.remove(root);
 		if (!nodes.isEmpty()) {
 			log.warn("The nodes of the graph intersect with already existing nodes");
+			log.debug("The following states are duplicate: " + Joiner.on(", ").join(nodes));
 		}
 
 		// TODO test for multiple commands from the same node

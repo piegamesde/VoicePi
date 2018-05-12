@@ -10,7 +10,10 @@ import java.util.concurrent.BlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.gson.JsonObject;
+import de.piegames.voicepi.Settings;
 import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.audio.Audio;
+import de.piegames.voicepi.state.VoiceState;
 
 /**
  * <p>
@@ -34,24 +37,30 @@ public abstract class SpeechRecognizer implements Runnable {
 	protected JsonObject						config;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected Thread							thread;
-	protected VoicePi							control;
+	protected Audio								audio;
+	protected Settings							settings;
+	protected VoiceState						stateMachine;
 	protected volatile boolean					deaf;
 
-	public SpeechRecognizer(VoicePi control, JsonObject config) {
+	public SpeechRecognizer(JsonObject config) {
 		this.config = config;
-		this.control = control;
 	}
 
 	/**
 	 * This will be called on startup to load all the necessary data to perform STT.
-	 *
 	 * @param commandsSpoken a {@link BlockingQueue} where to put all commands that got recognized. {@link VoicePi} will take them from the queue and process
 	 *            them. The queue is not size limited and will never block while adding items to it.
 	 * @param commands a set of commands that got registered by the modules. If the STT is using a finite vocabulary, this is it. If the STT works with
 	 *            arbitrary sentences, it may be used to improve recognition quality.
+	 *
+	 * @throws IOException if loading fails
+	 * @throws NullPointerException if audio is {@code null} but shouldn't be (this depends on the implementation)
 	 */
-	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+	public void load(Audio audio, VoiceState stateMachine, Settings settings, BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
 		this.commandsSpoken = Objects.requireNonNull(commandsSpoken);
+		this.audio = audio;
+		this.settings = settings;
+		this.stateMachine = stateMachine;
 	}
 
 	/**
@@ -90,27 +99,24 @@ public abstract class SpeechRecognizer implements Runnable {
 		return thread != null;
 	}
 
-	// protected boolean isStateEnabled() {
-	// ContextState current = control.getCurrentState();
-	// return activate.stream().anyMatch(s -> current.matches(s));
-	// }
-
 	protected void commandSpoken(String command) {
 		commandSpoken(Arrays.asList(command));
 	}
 
 	protected void commandSpoken(Collection<String> command) {
 		log.debug("Command spoken [" + String.join(", ", command) + "]");
-		// log.debug("Command spoken [" + String.join(", ", command) + "]" + (isStateEnabled() ? "" : " Will be ignored."));
-		// if (isStateEnabled())
 		commandsSpoken.offer(command);
 	}
 
 	/**
 	 * This will stop the recognizer from listening. The recognizer will not "hear" anything until {@code #undeafenRecognition()} is called. This is to prevent
 	 * recording the output of the speech synthesis as command again. This should have no effect to those recognizers who don't rely on the microphone.
+	 * <p/>
+	 * When this method is called it cannot be guaranteed that the recognizer will be running!
 	 */
 	public void deafenRecognition(boolean deaf) {
+		if (!isRunning())
+			return;
 		log.debug((deaf ? "Pausing " : "Resuming ") + getClass().getSimpleName());
 		this.deaf = deaf;
 	}

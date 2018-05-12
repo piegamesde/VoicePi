@@ -2,34 +2,24 @@ package de.piegames.voicepi.stt;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import javax.sound.sampled.AudioInputStream;
 import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
 import com.google.cloud.speech.v1p1beta1.RecognizeResponse;
 import com.google.cloud.speech.v1p1beta1.SpeechClient;
-import com.google.cloud.speech.v1p1beta1.SpeechContext;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
-import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.audio.Audio;
 
 public class GoogleRecognizer extends SpeechRecognizer {
 
-	public GoogleRecognizer(VoicePi control, JsonObject config) {
-		super(control, config);
-	}
-
-	@Override
-	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
-		super.load(commandsSpoken, commands);
+	public GoogleRecognizer(JsonObject config) {
+		super(config);
 	}
 
 	@Override
@@ -38,7 +28,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 			log.debug("Listening");
 			try {
 				System.out.println("Start-------------------------------------------");
-				AudioInputStream in = control.getAudio().listenCommand(Audio.FORMAT);
+				AudioInputStream in = audio.listenCommand(Audio.FORMAT);
 				if (in == null) {
 					System.out.println("NOPE!");
 					continue;
@@ -69,7 +59,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	public List<String> transcribe() {
 		try {
 			// TODO may be null
-			AudioInputStream in = control.getAudio().listenCommand(Audio.FORMAT);
+			AudioInputStream in = audio.listenCommand(Audio.FORMAT);
 			// System.out.println("Done");
 			if (in == null) {
 				System.out.println("NOPE!");
@@ -100,10 +90,10 @@ public class GoogleRecognizer extends SpeechRecognizer {
 		// Configure request with local raw PCM audio
 		RecognitionConfig config = RecognitionConfig.newBuilder()
 				.setEncoding(AudioEncoding.LINEAR16)
-				.setLanguageCode(control.getSettings().getLangCode())
+				// .setLanguageCode(control.getSettings().getLangCode())
 				.setSampleRateHertz(16000)
 				// TODO don't use this when transcribing
-				.addSpeechContexts(SpeechContext.newBuilder().addAllPhrases(control.getStateMachine().getAvailableCommands()).build())
+				// .addSpeechContexts(SpeechContext.newBuilder().addAllPhrases(control.getStateMachine().getAvailableCommands()).build())
 				.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()
 				.setContent(audioBytes)

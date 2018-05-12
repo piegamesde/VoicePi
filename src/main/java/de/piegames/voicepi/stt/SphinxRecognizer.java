@@ -7,7 +7,9 @@ import java.util.concurrent.BlockingQueue;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.LineUnavailableException;
 import com.google.gson.JsonObject;
-import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.Settings;
+import de.piegames.voicepi.audio.Audio;
+import de.piegames.voicepi.state.VoiceState;
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.SpeechResult;
 
@@ -16,8 +18,8 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 	protected SphinxSpeechRecognizer	stt;
 	protected AudioFormat				format;
 
-	public SphinxRecognizer(VoicePi control, JsonObject config) {
-		super(control, config);
+	public SphinxRecognizer(JsonObject config) {
+		super(config);
 		float sampleRate = config.has("sample-rate") ? config.getAsJsonPrimitive("sample-rate").getAsFloat() : 16000;
 		int sampleSize = config.has("sample-size") ? config.getAsJsonPrimitive("sample-size").getAsInt() : 16;
 		int channels = config.has("channels") ? config.getAsJsonPrimitive("channels").getAsInt() : 1;
@@ -27,15 +29,15 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 	}
 
 	@Override
-	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
-		super.load(commandsSpoken, commands);
+	public void load(Audio audio, VoiceState stateMachine, Settings settings, BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		super.load(audio, stateMachine, settings, commandsSpoken, commands);
 		// Configure stt
 		Configuration sphinxConfig = new Configuration();
 		sphinxConfig.setAcousticModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us");
 		sphinxConfig.setDictionaryPath(dicPath.toAbsolutePath().toUri().toURL().toString());
 		sphinxConfig.setLanguageModelPath(lmPath.toAbsolutePath().toUri().toURL().toString());
 
-		stt = new SphinxSpeechRecognizer(sphinxConfig, control.getAudio());
+		stt = new SphinxSpeechRecognizer(sphinxConfig, audio);
 	}
 
 	@Override
@@ -57,7 +59,8 @@ public class SphinxRecognizer extends SphinxBaseRecognizer {
 	@Override
 	public void deafenRecognition(boolean deaf) {
 		super.deafenRecognition(deaf);
-		stt.setDeaf(deaf);
+		if (isRunning())
+			stt.setDeaf(deaf);
 	}
 
 	@Override

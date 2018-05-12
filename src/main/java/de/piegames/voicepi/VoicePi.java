@@ -156,8 +156,7 @@ public class VoicePi implements Runnable {
 			settings.onCommandSpoken.execute(this, log, "onCommandSpoken");
 			// initialState: The state before this command was spoken and thus the state this command belongs to
 			responsible.onCommandSpoken(initialState, command);
-			if (!exit)
-				stt.deafenRecognition(false);
+			stt.deafenRecognition(false);
 		} else if (stateMachine.isActivationNeeded() && initialState == stateMachine.getStart()) {
 			log.info("You need to activate first");
 		} else {
@@ -243,18 +242,18 @@ public class VoicePi implements Runnable {
 			// TODO use Optional
 			stt = config.getSTT();
 			if (stt == null)
-				stt = config.loadSTTFromConfig(this);
+				stt = config.loadSTTFromConfig();
 
 			try {
 				if (stt != null)
-					stt.load(commandsSpoken, commands);
+					stt.load(audio, stateMachine, settings, commandsSpoken, commands);
 			} catch (RuntimeException | IOException e) {
 				log.error("Could not load the speech recognition module; switching to DeafRecognizer", e);
 				stt = null;
 			}
 
 			if (stt == null)
-				stt = new DeafRecognizer(this);
+				stt = new DeafRecognizer();
 			stt.startRecognition();
 		}
 		{ // Load TTS

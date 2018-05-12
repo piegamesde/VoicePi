@@ -2,7 +2,6 @@ package de.piegames.voicepi.stt;
 
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,23 +26,24 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-
 import de.piegames.voicepi.CommandsCache;
 import de.piegames.voicepi.CommandsCache.CacheElement;
-import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.Settings;
+import de.piegames.voicepi.audio.Audio;
+import de.piegames.voicepi.state.VoiceState;
 
 @SuppressWarnings("deprecation")
 public abstract class SphinxBaseRecognizer extends SpeechRecognizer {
 
 	protected Path lmPath, dicPath;
 
-	public SphinxBaseRecognizer(VoicePi control, JsonObject config) {
-		super(control, config);
+	public SphinxBaseRecognizer(JsonObject config) {
+		super(config);
 	}
 
 	@Override
-	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
-		this.commandsSpoken = commandsSpoken;
+	public void load(Audio audio, VoiceState stateMachine, Settings settings, BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		super.load(audio, stateMachine, settings, commandsSpoken, commands);
 		// Check cache
 		CommandsCache cache = new CommandsCache(Paths.get("cache.json"));
 		cache.loadFromCache();

@@ -28,11 +28,11 @@ public abstract class Audio {
 	protected float					calibratedAverage	= 1;
 
 	public Audio(JsonObject config) {
-		commandBufferSize = Optional.ofNullable(config.getAsJsonPrimitive("command-buffer-size")).map(JsonPrimitive::getAsFloat).orElse(10f);
-		minCommandLength = Optional.ofNullable(config.getAsJsonPrimitive("min-command-length")).map(JsonPrimitive::getAsFloat).orElse(0.25f);
-		maxCommandPauseTime = Optional.ofNullable(config.getAsJsonPrimitive("max-command-pause-time")).map(JsonPrimitive::getAsFloat).orElse(0.8f);
-		timeoutTime = Optional.ofNullable(config.getAsJsonPrimitive("command-timeout-time")).map(JsonPrimitive::getAsFloat).orElse(10f);
-		calibrationTime = Optional.ofNullable(config.getAsJsonPrimitive("calibration-time")).map(JsonPrimitive::getAsFloat).orElse(1f);
+		commandBufferSize = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("command-buffer-size")).map(JsonPrimitive::getAsFloat).orElse(10f);
+		minCommandLength = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("min-command-length")).map(JsonPrimitive::getAsFloat).orElse(0.25f);
+		maxCommandPauseTime = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("max-command-pause-time")).map(JsonPrimitive::getAsFloat).orElse(0.8f);
+		timeoutTime = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("command-timeout-time")).map(JsonPrimitive::getAsFloat).orElse(10f);
+		calibrationTime = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("calibration-time")).map(JsonPrimitive::getAsFloat).orElse(1f);
 		if (commandBufferSize < 1) {
 			log.warn("Minimum command buffer size is 1s");
 			commandBufferSize = 1;
