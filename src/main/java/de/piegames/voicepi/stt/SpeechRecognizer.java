@@ -3,7 +3,6 @@ package de.piegames.voicepi.stt;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -123,7 +122,7 @@ public abstract class SpeechRecognizer implements Runnable {
 
 	public abstract boolean transcriptionSupported();
 
-	public List<String> transcribe() {
+	public Collection<String> transcribe() {
 		throw new UnsupportedOperationException();
 	}
 

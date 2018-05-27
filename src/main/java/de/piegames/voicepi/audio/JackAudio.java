@@ -23,6 +23,7 @@ import org.jaudiolibs.jnajack.JackProcessCallback;
 import org.jaudiolibs.jnajack.JackSampleRateCallback;
 import org.jaudiolibs.jnajack.JackStatus;
 import com.google.gson.JsonObject;
+import de.piegames.voicepi.Settings;
 
 /**
  * Implements the {@link Audio} class using the system's JackAudio interface (through JNAJack bindings). This will require Jack to be installed and a Jack
@@ -43,7 +44,7 @@ public class JackAudio extends Audio implements JackProcessCallback, JackSampleR
 	}
 
 	@Override
-	public void init() throws IOException {
+	public void init(Settings settings) throws IOException {
 		try {
 			Jack jack = Jack.getInstance();
 			client = jack.openClient("VoicePi", EnumSet.noneOf(JackOptions.class), EnumSet.noneOf(JackStatus.class));

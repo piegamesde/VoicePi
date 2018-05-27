@@ -1,8 +1,9 @@
 VERSION 0.3.0
+- Complete rewrite of the audio system
 - Added MultiRecognizer and MultiSpeechEngine, allowing to combine multiple inputs and outputs
 - Added PocketsphinxRecognizer which is a lot faster (but has to be compiled)
-- Added an advanced SphinxRecognizer with the possibility to configure the audio format used to capture sound (sample rate etc.) for systems that don't support the default 16000Hz mono input.
-- Changed how context states work. Inter-module communication is possible now, but won't be exposed to the used through configuration
+- Added Google recognizer
+- Changed how context states work. Inter-module communication is possible now, but won't be exposed to the user through configuration
 - Passive modules that monitor things in the background and notify you once something happens. There are none yet, but they are technically possible now
 
 VERSION 0.2.1

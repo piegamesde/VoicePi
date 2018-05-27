@@ -111,12 +111,12 @@ public class Settings {
 	}
 
 	public int getTimeout() {
-		if (timeout < 0)
-			throw new IllegalArgumentException("Negative timeout values are not allowed. How do you imagine this to work?");
 		return timeout;
 	}
 
 	public void setTimeout(int timeout) {
+		if (timeout < 0)
+			throw new IllegalArgumentException("Negative timeout values are not allowed. How do you imagine this to work?");
 		this.timeout = timeout;
 	}
 

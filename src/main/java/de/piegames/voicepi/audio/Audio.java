@@ -13,6 +13,7 @@ import org.apache.commons.logging.LogFactory;
 import com.google.api.client.util.IOUtils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import de.piegames.voicepi.Settings;
 import de.piegames.voicepi.audio.VolumeSpeechDetector.State;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -31,7 +32,6 @@ public abstract class Audio {
 		commandBufferSize = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("command-buffer-size")).map(JsonPrimitive::getAsFloat).orElse(10f);
 		minCommandLength = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("min-command-length")).map(JsonPrimitive::getAsFloat).orElse(0.25f);
 		maxCommandPauseTime = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("max-command-pause-time")).map(JsonPrimitive::getAsFloat).orElse(0.8f);
-		timeoutTime = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("command-timeout-time")).map(JsonPrimitive::getAsFloat).orElse(10f);
 		calibrationTime = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("calibration-time")).map(JsonPrimitive::getAsFloat).orElse(1f);
 		if (commandBufferSize < 1) {
 			log.warn("Minimum command buffer size is 1s");
@@ -143,11 +143,17 @@ public abstract class Audio {
 	 */
 	public abstract void play(AudioInputStream stream) throws IOException;
 
-	/** Called to initialize all audio stuff required to operate */
-	public void init() throws IOException {
+	/**
+	 * Called to initialize all audio stuff required to operate
+	 */
+	public void init(Settings settings) throws IOException {
+		if (settings != null)
+			timeoutTime = settings.getTimeout();
+		if (timeoutTime == 0)
+			timeoutTime = 10;
 	}
 
-	/** Called to free all resources claimed by {@link #init()} */
+	/** Called to free all resources claimed by {@link #init(Settings)} */
 	public void close() throws IOException {
 	}
 

@@ -90,7 +90,7 @@ public class MultiRecognizerTest {
 						new Pair<>(c, Arrays.asList("moduleB:stateC")),
 						new Pair<>(d, Arrays.asList("*:*")),
 						new Pair<>(e, Arrays.asList())),
-				true);
+				true, 0);
 		stt.load(null, stateMachine, null, commandsSpoken, null);
 		stt.startRecognition();
 
@@ -122,7 +122,7 @@ public class MultiRecognizerTest {
 						new Pair<>(c, Arrays.asList("moduleB:stateC")),
 						new Pair<>(d, Arrays.asList("*:*")),
 						new Pair<>(e, Arrays.asList())),
-				false);
+				false, 0);
 		stt.load(null, stateMachine, null, commandsSpoken, null);
 		stt.startRecognition();
 
@@ -155,7 +155,7 @@ public class MultiRecognizerTest {
 						new Pair<>(c, Arrays.asList("moduleB:stateC")),
 						new Pair<>(d, Arrays.asList("*:*")),
 						new Pair<>(e, Arrays.asList())),
-				false);
+				false, 0);
 		stt.load(null, stateMachine, null, commandsSpoken, null);
 		stt.startRecognition();
 

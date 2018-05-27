@@ -67,17 +67,13 @@ public class VoicePi implements Runnable {
 		log.debug("Available commands: " + stateMachine.getAvailableCommands());
 		while (!exit) {
 			try {
-				// TODO this will fail if the timeout is infinite and should be moved somewhere else
 				if (!notifications.isEmpty() && stateMachine.isIdle()) {
 					Thread.sleep(1000);
 					ContextState state = notifications.remove();
 					log.info("Push notification incoming: " + state);
 					stateMachine.current.set(state);
 				}
-				if (stateMachine.isIdle())
-					listenFirstCommand();
-				else
-					listenCommand();
+				listenCommand(!stateMachine.isIdle());
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
@@ -93,24 +89,19 @@ public class VoicePi implements Runnable {
 		exitApplication();
 	}
 
-	// Listen to first command: no wrong commands
-	protected void listenFirstCommand() throws InterruptedException {
-		Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
-		if (spoken != null) {
-			onCommandSpoken(spoken);
-			log.debug("Current state: " + stateMachine.getCurrentState());
-			log.debug("Available commands: " + stateMachine.getAvailableCommands());
-		}
-	}
-
-	// Listen to subsequent commands: potential timeout
-	protected void listenCommand() throws InterruptedException {
-		Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
-		if (spoken != null) {
-			onCommandSpoken(spoken);
-			log.debug("Current state: " + stateMachine.getCurrentState());
-			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+	protected void listenCommand(boolean canTimeOut) throws InterruptedException {
+		Collection<String> spoken = null;
+		if (settings.timeout > 0) {
+			spoken = commandsSpoken.poll(settings.timeout, TimeUnit.SECONDS);
 		} else {
+			spoken = commandsSpoken.poll(stateMachine.isIdle() ? 10 : Integer.MAX_VALUE, TimeUnit.SECONDS);
+			canTimeOut = false;
+		}
+		if (spoken != null) {
+			onCommandSpoken(spoken);
+			log.debug("Current state: " + stateMachine.getCurrentState());
+			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+		} else if (canTimeOut) {
 			log.info("Timed out");
 			stt.deafenRecognition(true);
 			settings.onTimeout.execute(this, log, "onTimeout");
@@ -218,7 +209,7 @@ public class VoicePi implements Runnable {
 			if (audio == null)
 				audio = config.loadAudioFromConfig();
 			try {
-				audio.init();
+				audio.init(settings);
 			} catch (IOException e) {
 				log.error("Could not initialize audio", e);
 				audio = null;

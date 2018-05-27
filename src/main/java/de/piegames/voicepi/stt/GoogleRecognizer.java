@@ -8,8 +8,10 @@ import javax.sound.sampled.AudioInputStream;
 import com.google.cloud.speech.v1p1beta1.RecognitionAudio;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig;
 import com.google.cloud.speech.v1p1beta1.RecognitionConfig.AudioEncoding;
+import com.google.cloud.speech.v1p1beta1.RecognitionConfig.Builder;
 import com.google.cloud.speech.v1p1beta1.RecognizeResponse;
 import com.google.cloud.speech.v1p1beta1.SpeechClient;
+import com.google.cloud.speech.v1p1beta1.SpeechContext;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionAlternative;
 import com.google.cloud.speech.v1p1beta1.SpeechRecognitionResult;
 import com.google.gson.JsonObject;
@@ -34,7 +36,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 					continue;
 				}
 				byte[] fileData = Audio.readAllBytes(in);
-				List<String> strres = syncRecognizeData(fileData);
+				List<String> strres = syncRecognizeData(fileData, false);
 				this.commandsSpoken.offer(strres);
 			} catch (Exception e) {
 				log.error("Could not analyze audio: ", e);
@@ -66,7 +68,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 				return Collections.emptyList();
 			}
 			byte[] b = Audio.readAllBytes(in);
-			return syncRecognizeData(b);
+			return syncRecognizeData(b, true);
 			// TODO multi-catch?
 		} catch (IOException e) {
 			log.error("Could not read from microphone input", e);
@@ -80,7 +82,7 @@ public class GoogleRecognizer extends SpeechRecognizer {
 	public void unload() {
 	}
 
-	public List<String> syncRecognizeData(byte[] data) throws Exception, IOException {
+	public List<String> syncRecognizeData(byte[] data, boolean transcribe) throws Exception, IOException {
 		if (data == null)
 			return Collections.emptyList();
 		log.info("Processing audio data...");
@@ -88,13 +90,14 @@ public class GoogleRecognizer extends SpeechRecognizer {
 		ByteString audioBytes = ByteString.copyFrom(data);
 
 		// Configure request with local raw PCM audio
-		RecognitionConfig config = RecognitionConfig.newBuilder()
+		Builder builder = RecognitionConfig.newBuilder()
 				.setEncoding(AudioEncoding.LINEAR16)
-				// .setLanguageCode(control.getSettings().getLangCode())
-				.setSampleRateHertz(16000)
-				// TODO don't use this when transcribing
-				// .addSpeechContexts(SpeechContext.newBuilder().addAllPhrases(control.getStateMachine().getAvailableCommands()).build())
-				.build();
+				.setLanguageCode(settings.getLangCode())
+				.setSampleRateHertz(16000);
+		if (!transcribe)
+			builder = builder
+					.addSpeechContexts(SpeechContext.newBuilder().addAllPhrases(stateMachine.getAvailableCommands()).build());
+		RecognitionConfig config = builder.build();
 		RecognitionAudio audio = RecognitionAudio.newBuilder()
 				.setContent(audioBytes)
 				.build();

@@ -2,6 +2,7 @@ package de.piegames.voicepi.stt;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -53,6 +54,15 @@ public class StdInRecognizer extends SpeechRecognizer {
 
 	@Override
 	public boolean transcriptionSupported() {
-		return false;
+		return true;
+	}
+
+	@Override
+	public Collection<String> transcribe() {
+		try {
+			return commandsSpoken.take();
+		} catch (InterruptedException e) {
+			return Collections.emptyList();
+		}
 	}
 }

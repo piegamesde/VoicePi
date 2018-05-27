@@ -2,6 +2,7 @@ package de.piegames.voicepi.stt;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import com.google.gson.JsonObject;
@@ -46,6 +47,15 @@ public class QueueRecognizer extends SpeechRecognizer {
 
 	@Override
 	public boolean transcriptionSupported() {
-		return false;
+		return true;
+	}
+
+	@Override
+	public Collection<String> transcribe() {
+		try {
+			return commandsSpoken.take();
+		} catch (InterruptedException e) {
+			return Collections.emptyList();
+		}
 	}
 }

@@ -11,6 +11,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import de.piegames.voicepi.Settings;
 
 public class FileAudio extends Audio {
 
@@ -30,7 +31,7 @@ public class FileAudio extends Audio {
 	}
 
 	@Override
-	public void init() throws IOException {
+	public void init(Settings settings) throws IOException {
 		try {
 			format = AudioSystem.getAudioFileFormat(inFile).getFormat();
 		} catch (UnsupportedAudioFileException e) {
@@ -91,7 +92,7 @@ public class FileAudio extends Audio {
 
 	public void setInFile(File file) throws IOException {
 		this.inFile = Objects.requireNonNull(file);
-		init();
+		init(null);
 	}
 
 	@Override

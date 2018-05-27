@@ -7,10 +7,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import de.piegames.voicepi.Settings;
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.audio.Audio;
@@ -21,6 +23,7 @@ public class MultiRecognizer extends SpeechRecognizer {
 
 	protected List<Pair<SpeechRecognizer, List<String>>>	recognizers;
 	protected boolean										onlyOne;
+	protected int											transcriptionRecognizer;
 
 	public MultiRecognizer(JsonObject config) {
 		super(config);
@@ -52,12 +55,22 @@ public class MultiRecognizer extends SpeechRecognizer {
 				log.warn("Could not instantiate speech recognizer " + stt.getAsJsonPrimitive("class-name").getAsString(), e1);
 			}
 		}
+		transcriptionRecognizer = Optional.ofNullable(config).map(c -> c.getAsJsonPrimitive("transcription-recognizer")).map(JsonPrimitive::getAsInt).orElse(0);
+		if (recognizers.isEmpty())
+			throw new IllegalArgumentException("List of recognizers cannot be empty");
+		if (transcriptionRecognizer < 0 || transcriptionRecognizer >= recognizers.size())
+			throw new IllegalArgumentException("Transcription recognizer " + transcriptionRecognizer + " out of bounds, must be in [0;" + recognizers.size() + ")");
 	}
 
-	public MultiRecognizer(List<Pair<SpeechRecognizer, List<String>>> recognizers, boolean onlyOne) {
+	public MultiRecognizer(List<Pair<SpeechRecognizer, List<String>>> recognizers, boolean onlyOne, int transcriptionRecognizer) {
 		super(null);
 		this.recognizers = new ArrayList<>(Objects.requireNonNull(recognizers));
+		if (recognizers.isEmpty())
+			throw new IllegalArgumentException("List of recognizers cannot be empty");
+		if (transcriptionRecognizer < 0 || transcriptionRecognizer >= recognizers.size())
+			throw new IllegalArgumentException("Transcription recognizer " + transcriptionRecognizer + " out of bounds, must be in [0;" + recognizers.size() + ")");
 		this.onlyOne = onlyOne;
+		this.transcriptionRecognizer = transcriptionRecognizer;
 	}
 
 	@Override
@@ -105,7 +118,12 @@ public class MultiRecognizer extends SpeechRecognizer {
 
 	@Override
 	public boolean transcriptionSupported() {
-		return false;// TODO
+		return recognizers.get(transcriptionRecognizer).getKey().transcriptionSupported();
+	}
+
+	@Override
+	public Collection<String> transcribe() {
+		return recognizers.get(transcriptionRecognizer).getKey().transcribe();
 	}
 
 	@Override

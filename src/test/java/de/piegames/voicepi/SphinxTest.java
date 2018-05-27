@@ -27,7 +27,7 @@ public class SphinxTest {
 		config = new Configuration(Paths.get(getClass().getResource("/testconfig.json").toURI()));
 		config.setAudio(audio = new FileAudio(null, new File(getClass().getResource("/commands1.wav").toURI()), null));
 		control = new VoicePi(config);
-		config.setSTT(new SphinxRecognizer(control, new JsonObject()));
+		config.setSTT(new SphinxRecognizer(new JsonObject()));
 		control.reload();
 		stt = (SphinxRecognizer) control.getSTT();
 		tts = (QueueEngine) control.getTTS();
