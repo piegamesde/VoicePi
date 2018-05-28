@@ -18,22 +18,25 @@ public class SphinxTest {
 	protected QueueEngine		tts;
 	protected Thread			t;
 	protected FileAudio			audio;
-	protected final long		timeout	= 2;
+	protected final long		timeout	= 20;
 	protected Configuration		config;
 
 	/** All tests have to be in one method, because of the way FileAudio works */
 	@Test
 	public void allTests() throws URISyntaxException, InterruptedException {
+		System.out.println(getClass().getResource("/testconfig.json").toURI());
 		config = new Configuration(Paths.get(getClass().getResource("/testconfig.json").toURI()));
 		config.setAudio(audio = new FileAudio(null, new File(getClass().getResource("/commands1.wav").toURI()), null));
 		control = new VoicePi(config);
-		config.setSTT(new SphinxRecognizer(control, new JsonObject()));
+		config.setSTT(new SphinxRecognizer(new JsonObject()));
 		control.reload();
 		stt = (SphinxRecognizer) control.getSTT();
 		tts = (QueueEngine) control.getTTS();
 
 		t = new Thread(control);
 		t.start();
+
+		assertEquals("Starting VoicePi", tts.spoken.poll(timeout, TimeUnit.SECONDS));
 
 		// ACTIVATE
 		assertEquals("Yes, sir", tts.spoken.poll(timeout, TimeUnit.SECONDS));
