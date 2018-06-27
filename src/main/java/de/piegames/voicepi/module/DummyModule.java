@@ -4,7 +4,7 @@ import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
 import de.piegames.voicepi.VoicePi;
-import de.piegames.voicepi.state.CommandSet;
+import de.piegames.voicepi.state.Command;
 import de.piegames.voicepi.state.ContextState;
 
 
@@ -19,7 +19,7 @@ public class DummyModule extends Module {
 	}
 
 	@Override
-	public MutableValueGraph<ContextState, CommandSet> listCommands(ContextState root) {
+	public MutableValueGraph<ContextState, Command> listCommands(ContextState root) {
 		return ValueGraphBuilder.directed().build();
 	}
 

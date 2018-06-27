@@ -2,26 +2,31 @@ package de.piegames.voicepi.state;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+
 import org.junit.Test;
+
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+
+import de.piegames.voicepi.state.Command.CommandSet;
 
 public class VoiceStateTest {
 
 	/** Creates a simple graph for testing that contains only one command */
-	private MutableValueGraph<ContextState, CommandSet> createModule1(ContextState root) {
-		MutableValueGraph<ContextState, CommandSet> graph = ValueGraphBuilder.directed().build();
+	private MutableValueGraph<ContextState, Command> createModule1(ContextState root) {
+		MutableValueGraph<ContextState, Command> graph = ValueGraphBuilder.directed().build();
 		ContextState end = new ContextState("module1", "end");
 		graph.putEdgeValue(root, end, new CommandSet(null, new HashSet<>(Arrays.asList("TEST"))));
 		return graph;
 	}
 
 	/** Creates a graph for testing with one in-between state and a few useless commands. */
-	private MutableValueGraph<ContextState, CommandSet> createModule2(ContextState root) {
-		MutableValueGraph<ContextState, CommandSet> graph = ValueGraphBuilder.directed().build();
+	private MutableValueGraph<ContextState, Command> createModule2(ContextState root) {
+		MutableValueGraph<ContextState, Command> graph = ValueGraphBuilder.directed().build();
 		ContextState between = new ContextState("module2", "between");
 		ContextState end2 = new ContextState("module2", "end");
 		graph.putEdgeValue(root, between, new CommandSet(null, new HashSet<>(Arrays.asList("HI", "HELLO"))));
@@ -49,7 +54,7 @@ public class VoiceStateTest {
 		assertEquals("voicepi", uut.getCurrentState().module);
 		assertEquals(root, uut.getCurrentState());
 
-		MutableValueGraph<ContextState, CommandSet> graph = createModule2(root);
+		MutableValueGraph<ContextState, Command> graph = createModule2(root);
 		uut.addModuleGraph(graph);
 		ContextState between = new ContextState("module2", "between");
 

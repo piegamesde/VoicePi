@@ -3,6 +3,7 @@ package de.piegames.voicepi;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -12,14 +13,18 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.Before;
 import org.junit.Test;
+
 import com.google.common.collect.Sets;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
+
 import de.piegames.voicepi.module.DummyModule;
 import de.piegames.voicepi.module.Module;
-import de.piegames.voicepi.state.CommandSet;
+import de.piegames.voicepi.state.Command;
+import de.piegames.voicepi.state.Command.CommandSet;
 import de.piegames.voicepi.state.ContextState;
 import de.piegames.voicepi.state.VoiceState;
 import de.piegames.voicepi.stt.MultiRecognizer;
@@ -49,7 +54,7 @@ public class MultiRecognizerTest {
 			ContextState stateB = new ContextState("moduleA", "stateB");
 			ContextState stateC = new ContextState("moduleA", "stateC");
 			ContextState stateE = new ContextState("moduleA", "end");
-			MutableValueGraph<ContextState, CommandSet> graph = ValueGraphBuilder.directed().build();
+			MutableValueGraph<ContextState, Command> graph = ValueGraphBuilder.directed().build();
 			graph.putEdgeValue(root, stateA, new CommandSet(module, Sets.newHashSet("AA")));
 			graph.putEdgeValue(stateA, stateE, new CommandSet(module, Sets.newHashSet("end")));
 			graph.putEdgeValue(root, stateB, new CommandSet(module, Sets.newHashSet("AB")));
@@ -64,7 +69,7 @@ public class MultiRecognizerTest {
 			ContextState stateB = new ContextState("moduleB", "stateB");
 			ContextState stateC = new ContextState("moduleB", "stateC");
 			ContextState stateE = new ContextState("moduleB", "end");
-			MutableValueGraph<ContextState, CommandSet> graph = ValueGraphBuilder.directed().build();
+			MutableValueGraph<ContextState, Command> graph = ValueGraphBuilder.directed().build();
 			graph.putEdgeValue(root, stateA, new CommandSet(module, Sets.newHashSet("BA")));
 			graph.putEdgeValue(stateA, stateE, new CommandSet(module, Sets.newHashSet("end")));
 			graph.putEdgeValue(root, stateB, new CommandSet(module, Sets.newHashSet("BB")));

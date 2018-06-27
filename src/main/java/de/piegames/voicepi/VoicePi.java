@@ -27,7 +27,7 @@ import de.piegames.voicepi.action.Action;
 import de.piegames.voicepi.action.Action.ActionType;
 import de.piegames.voicepi.audio.Audio;
 import de.piegames.voicepi.module.Module;
-import de.piegames.voicepi.state.CommandSet;
+import de.piegames.voicepi.state.Command;
 import de.piegames.voicepi.state.ContextState;
 import de.piegames.voicepi.state.VoiceState;
 import de.piegames.voicepi.stt.DeafRecognizer;
@@ -127,7 +127,7 @@ public class VoicePi implements Runnable {
 				s = s.substring(0, s.length() - 4);
 			s = s.trim();
 
-			CommandSet edge = stateMachine.commandSpoken(s);
+			Command edge = stateMachine.commandSpoken(s);
 			if (edge != null) {
 				responsible = edge.owner;
 				command = s;

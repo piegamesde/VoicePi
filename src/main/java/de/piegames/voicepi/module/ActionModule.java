@@ -4,14 +4,17 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import com.google.common.base.Optional;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.MutableValueGraph;
 import com.google.common.graph.ValueGraphBuilder;
 import com.google.gson.JsonObject;
+
 import de.piegames.voicepi.VoicePi;
 import de.piegames.voicepi.action.Action;
-import de.piegames.voicepi.state.CommandSet;
+import de.piegames.voicepi.state.Command;
+import de.piegames.voicepi.state.Command.CommandSet;
 import de.piegames.voicepi.state.ContextState;
 
 public class ActionModule extends Module {
@@ -57,7 +60,7 @@ public class ActionModule extends Module {
 	}
 
 	@Override
-	public MutableValueGraph<ContextState, CommandSet> listCommands(ContextState root) {
+	public MutableValueGraph<ContextState, Command> listCommands(ContextState root) {
 		Map<String, ContextState> states = commands
 				.nodes()
 				.stream()
@@ -65,7 +68,7 @@ public class ActionModule extends Module {
 				.collect(Collectors.toMap(s -> s, s -> new ContextState(name, s)));
 		states.put("root", root);
 
-		MutableValueGraph<ContextState, CommandSet> ret = ValueGraphBuilder.directed().build();
+		MutableValueGraph<ContextState, Command> ret = ValueGraphBuilder.directed().build();
 		// ret.putEdgeValue(root, node, Collections.unmodifiableSet(startCommands.keySet()));
 		for (EndpointPair<String> edge : commands.edges()) {
 			ret.putEdgeValue(
