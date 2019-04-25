@@ -25,6 +25,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import de.piegames.voicepi.action.Action;
 import de.piegames.voicepi.action.Action.ActionType;
+import de.piegames.voicepi.audio.Audio;
 import de.piegames.voicepi.module.Module;
 import de.piegames.voicepi.state.CommandSet;
 import de.piegames.voicepi.state.ContextState;
@@ -46,6 +47,7 @@ public class VoicePi implements Runnable {
 	protected SpeechEngine						tts;
 	protected BlockingQueue<Collection<String>>	commandsSpoken;
 	protected SpeechRecognizer					stt;
+	protected Audio								audio;
 	protected Map<String, Module>				modules			= new HashMap<>();
 	protected Settings							settings		= new Settings();
 	protected final Queue<ContextState>			notifications	= new SynchronousQueue<>();
@@ -65,24 +67,17 @@ public class VoicePi implements Runnable {
 		log.debug("Available commands: " + stateMachine.getAvailableCommands());
 		while (!exit) {
 			try {
+				// TODO this will fail if the timeout is infinite and should be moved somewhere else
 				if (!notifications.isEmpty() && stateMachine.isIdle()) {
 					Thread.sleep(1000);
 					ContextState state = notifications.remove();
 					log.info("Push notification incoming: " + state);
 					stateMachine.current.set(state);
 				}
-				Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
-				if (spoken != null) {
-					onCommandSpoken(spoken);
-					log.debug("Current state: " + stateMachine.getCurrentState());
-					log.debug("Available commands: " + stateMachine.getAvailableCommands());
-				} else if (!stateMachine.isWaitingForActivation() && stateMachine.isActivationNeeded()) {
-					log.info("Timed out");
-					stt.deafenRecognition(true);
-					settings.onTimeout.execute(this, log, "onTimeout");
-					stateMachine.resetState();
-					stt.deafenRecognition(false);
-				}
+				if (stateMachine.isIdle())
+					listenFirstCommand();
+				else
+					listenCommand();
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			} catch (Exception e) {
@@ -96,6 +91,32 @@ public class VoicePi implements Runnable {
 		}
 		log.debug("Quit main loop");
 		exitApplication();
+	}
+
+	// Listen to first command: no wrong commands
+	protected void listenFirstCommand() throws InterruptedException {
+		Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
+		if (spoken != null) {
+			onCommandSpoken(spoken);
+			log.debug("Current state: " + stateMachine.getCurrentState());
+			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+		}
+	}
+
+	// Listen to subsequent commands: potential timeout
+	protected void listenCommand() throws InterruptedException {
+		Collection<String> spoken = commandsSpoken.poll((settings.timeout > 0) ? settings.timeout : Integer.MAX_VALUE, TimeUnit.SECONDS);
+		if (spoken != null) {
+			onCommandSpoken(spoken);
+			log.debug("Current state: " + stateMachine.getCurrentState());
+			log.debug("Available commands: " + stateMachine.getAvailableCommands());
+		} else {
+			log.info("Timed out");
+			stt.deafenRecognition(true);
+			settings.onTimeout.execute(this, log, "onTimeout");
+			stateMachine.resetState();
+			stt.deafenRecognition(false);
+		}
 	}
 
 	public void onCommandSpoken(String command) {
@@ -152,15 +173,7 @@ public class VoicePi implements Runnable {
 
 		notifications.clear();
 		commandsSpoken = new LinkedBlockingQueue<>();
-		// Close modules
-		if (stt != null) {
-			stt.stopRecognition();
-			stt.unload();
-			stt = null;
-		}
-		tts = null;
-		modules.values().forEach(Module::close);
-		modules.clear();
+		unload();
 
 		// Load config
 		try {
@@ -200,6 +213,23 @@ public class VoicePi implements Runnable {
 			this.modules.put(name, module);
 		});
 
+		{// Load audio
+			audio = config.getAudio();
+			if (audio == null)
+				audio = config.loadAudioFromConfig();
+			try {
+				audio.init();
+			} catch (IOException e) {
+				log.error("Could not initialize audio", e);
+				audio = null;
+			}
+			if (audio == null) {
+				log.fatal("Cannot load audio from configuration. This is required to run VoicePi!");
+				exitApplication();
+				throw new InternalError("Could not load audio");
+			}
+		}
+
 		// Get all commands
 		Set<String> commands = stateMachine.getAllCommands();
 		if (commands.isEmpty())
@@ -212,18 +242,18 @@ public class VoicePi implements Runnable {
 			// TODO use Optional
 			stt = config.getSTT();
 			if (stt == null)
-				stt = config.loadSTTFromConfig(this);
+				stt = config.loadSTTFromConfig();
 
 			try {
 				if (stt != null)
-					stt.load(commandsSpoken, commands);
-			} catch (IOException e) {
+					stt.load(audio, stateMachine, settings, commandsSpoken, commands);
+			} catch (RuntimeException | IOException e) {
 				log.error("Could not load the speech recognition module; switching to DeafRecognizer", e);
 				stt = null;
 			}
 
 			if (stt == null)
-				stt = new DeafRecognizer(this);
+				stt = new DeafRecognizer();
 			stt.startRecognition();
 		}
 		{ // Load TTS
@@ -238,16 +268,31 @@ public class VoicePi implements Runnable {
 		}
 	}
 
+	protected void unload() {
+		log.info("Unloading everything");
+		if (stt != null) {
+			stt.stopRecognition();
+			stt.unload();
+		}
+		tts = null;
+		if (audio != null)
+			try {
+				audio.close();
+			} catch (IOException e) {
+				log.fatal("Could not close all audio resources", e);
+			}
+		modules.values().forEach(Module::close);
+		modules.clear();
+	}
+
 	public void exitApplication() {
 		if (exit) // Application already stopped
 			return;
 		exit = true;
 
 		log.info("Stopping speech recognition");
-		stt.stopRecognition();
-		stt.unload();
-		modules.values().forEach(Module::close);
 		settings.onExit.execute(this, log, "onExit");
+		unload();
 		log.info("Quitting application");
 	}
 
@@ -257,6 +302,10 @@ public class VoicePi implements Runnable {
 
 	public SpeechRecognizer getSTT() {
 		return stt;
+	}
+
+	public Audio getAudio() {
+		return audio;
 	}
 
 	public ContextState getCurrentState() {

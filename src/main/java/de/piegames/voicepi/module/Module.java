@@ -17,7 +17,7 @@ public abstract class Module {
 	protected JsonObject	config;
 
 	public Module(VoicePi control, String name, JsonObject config) throws RuntimeException {
-		this.control = Objects.requireNonNull(control);
+		this.control = control;
 		this.name = Objects.requireNonNull(name);
 		this.config = config;
 		if (name.equals("*"))

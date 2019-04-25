@@ -18,7 +18,10 @@ public class InterruptibleInputStream extends InputStream {
 			if (in.available() > 0)
 				return in.read();
 			else
-				Thread.yield();
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
 		throw new IOException("Thread interrupted while reading");
 	}
 
@@ -41,7 +44,10 @@ public class InterruptibleInputStream extends InputStream {
 				c = in.read();
 				break;
 			} else
-				Thread.yield();
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
 		if (c == -1) {
 			return -1;
 		}

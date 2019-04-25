@@ -23,6 +23,8 @@ public class Settings {
 	protected Action		onWrongCommand		= Action.DO_NOTHING;
 	@SerializedName("on-command-spoken")
 	protected Action		onCommandSpoken		= Action.DO_NOTHING;
+	@SerializedName("language-code")
+	protected String		langCode			= "en-US";
 
 	protected int			timeout				= 0;
 	@SerializedName("activation-commands")
@@ -97,6 +99,15 @@ public class Settings {
 
 	public void setOnCommandSpoken(Action onCommandSpoken) {
 		this.onCommandSpoken = Objects.requireNonNull(onCommandSpoken, "Use Action.DO_NOTHING instead of null");
+	}
+
+	public void setLangCode(String langCode) {
+		//Todo check if valid ?!
+		this.langCode = langCode;
+	}
+
+	public String getLangCode() {
+		return langCode;
 	}
 
 	public int getTimeout() {

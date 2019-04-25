@@ -31,17 +31,21 @@
 	"activation-commands": [
 		"ACTIVATE"
 	],
+	"audio": {
+		"class-name": "de.piegames.voicepi.audio.DefaultAudio",
+		"command-buffer-size": 10
+	},
 	"tts": {
 		"class-name": "de.piegames.voicepi.tts.QueueEngine"
 	},
 	"stt": {
-		"class-name": "de.piegames.voicepi.stt.QueueRecognizer",
-		"corpus-history-size": 10
+		"class-name": "de.piegames.voicepi.stt.QueueRecognizer"
 	},
 	"active-modules": [
 		"shell",
 		"application-control",
-		"advanced"
+		"advanced",
+		"multirecognizer"
 	],
 	"modules": {
 		"shell": {
@@ -69,6 +73,25 @@
 				"ADVANCE": {
 					"action": "say-text",
 					"text": "Going to the next level",
+					"next-state": "advanced"
+				}
+			},
+			"commands-advanced": {
+				"TEST": {
+					"action": "say-text",
+					"text": "Advanced shit, bro!"
+				},
+				"TEST2": {
+					"action": "say-text",
+					"text": "Feel the progress?"
+				}
+			}
+		},
+		"multirecognizer": {
+			"class-name": "de.piegames.voicepi.module.ActionModule",
+			"commands": {
+				"ADVANCE": {
+					"action": "none",
 					"next-state": "advanced"
 				}
 			},

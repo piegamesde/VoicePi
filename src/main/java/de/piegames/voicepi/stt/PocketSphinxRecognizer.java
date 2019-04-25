@@ -13,20 +13,22 @@ import org.freedesktop.gstreamer.Message;
 import org.freedesktop.gstreamer.Pipeline;
 import org.freedesktop.gstreamer.Structure;
 import com.google.gson.JsonObject;
-import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.Settings;
+import de.piegames.voicepi.audio.Audio;
+import de.piegames.voicepi.state.VoiceState;
 import edu.cmu.sphinx.api.Configuration;
 
 public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 
 	protected Pipeline pipeline;
 
-	public PocketSphinxRecognizer(VoicePi control, JsonObject config) {
-		super(control, config);
+	public PocketSphinxRecognizer(JsonObject config) {
+		super(config);
 	}
 
 	@Override
-	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
-		super.load(commandsSpoken, commands);
+	public void load(Audio audio, VoiceState stateMachine, Settings settings, BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		super.load(audio, stateMachine, settings, commandsSpoken, commands);
 		// Configure stt
 		Configuration sphinxConfig = new Configuration();
 		sphinxConfig.setAcousticModelPath("resource:/edu/cmu/sphinx/models/en-us/en-us");
@@ -37,6 +39,7 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 		log.debug("Language model path: " + lmPath.toAbsolutePath());
 
 		Gst.init();
+		// FIXME: this will fail after reloading for some reason
 		pipeline = Pipeline.launch("autoaudiosrc ! audioconvert !  audioresample ! pocketsphinx name=asr ! fakesink");
 		Element asr = pipeline.getElementByName("asr");
 		System.out.println(Arrays.toString(asr.listPropertyNames().toArray()));
@@ -74,18 +77,14 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 
 	@Override
 	public void startRecognition() {
-		log.debug("Starting PocketSphinxRecognizer");
-		thread = new Thread(this);
-		thread.start();
+		super.startRecognition();
 		pipeline.play();
 	}
 
 	@Override
 	public void stopRecognition() {
-		log.debug("Stopping PocketSphinxRecognizer");
 		pipeline.pause();
-		thread.interrupt();
-		thread = null;
+		super.stopRecognition();
 	}
 
 	@Override
@@ -101,7 +100,13 @@ public class PocketSphinxRecognizer extends SphinxBaseRecognizer {
 
 	@Override
 	public void unload() {
+		super.unload();
 		pipeline.stop();
 		Gst.deinit();
+	}
+
+	@Override
+	public boolean transcriptionSupported() {
+		return false;
 	}
 }

@@ -15,27 +15,32 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.piegames.voicepi.audio.Audio;
 import de.piegames.voicepi.module.Module;
 import de.piegames.voicepi.stt.SpeechRecognizer;
 import de.piegames.voicepi.tts.SpeechEngine;
 
 /**
  * This class manages the configuration file of the application, including loading saving and providing default values. Settings are mapped to JsonObject that
- * can be requested and modified. Any modifications will be reflected in the configuration file when saving the next time.
- *
+ * can be requested and modified. Any modifications will be reflected in the configuration file when saving the next time. <br/>
  * It also allows for overriding some of the values by calling the respective methods through code. This allows the configuration to be used without any real
  * configuration file (load the defaults and then override them). This is especially useful for Unit Tests, but might come in handy for other scenarios too.
- *
- *
+ * <br/>
+ * The {@code customXXX} fields are used to store these custom values. They can be accessed through the {@code getXXX} and {@code setXXX} methods and won't be
+ * used by this class. When reloading, the {@link VoicePi} will check though the getters if the respective custom object is set. If yes, it will use that one.
+ * If no, it will call the {@code loadXXXFromConfig} and use that one instead. Note that the {@code loadXXXFromConfig} does not alter any of the
+ * {@code customXXX} fields. It only returns the newly created object.
  */
 public class Configuration {
+	// TODO catch all NullPointerExc, eg. the config file is incorrect
 
 	protected final Log				log	= LogFactory.getLog(getClass());
 
 	protected final Path			path;
-	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig, settingsConfig;
+	protected JsonObject			config, modulesConfig, sttConfig, ttsConfig, settingsConfig, audioConfig;
 	protected SpeechEngine			customTTS;
 	protected SpeechRecognizer		customSTT;
+	protected Audio					customAudio;
 	protected Map<String, Module>	customModules;
 	protected Settings				customSettings;
 
@@ -49,10 +54,12 @@ public class Configuration {
 		this.path = path;
 	}
 
+	/** Returns the path where the configuration file is expected to be by default. */
 	public Path getDefaultPath() {
 		return Paths.get("config.json");
 	}
 
+	/** This will load a default configuration file from within the .jar */
 	public void loadDefaultConfig() {
 		log.info("Loading default configuration at " + getClass().getResource("/defaultconfig.json"));
 		try {
@@ -62,10 +69,12 @@ public class Configuration {
 		}
 	}
 
+	/** This will load the configuration specified at the path set in the constructor */
 	public void loadConfig() throws IOException {
 		loadConfig(path);
 	}
 
+	/** This will load the configuration from a file at the given location */
 	private void loadConfig(Path path) throws IOException {
 		// Load config
 		log.info("Loading configuration from file " + path.toAbsolutePath());
@@ -77,6 +86,7 @@ public class Configuration {
 		modulesConfig = config.getAsJsonObject("modules");
 		sttConfig = config.getAsJsonObject("stt");
 		ttsConfig = config.getAsJsonObject("tts");
+		audioConfig = config.getAsJsonObject("audio");
 		settingsConfig = config;
 	}
 
@@ -89,7 +99,11 @@ public class Configuration {
 	}
 
 	public JsonObject getTTSConfig() {
-		return ttsConfig.getAsJsonObject();
+		return ttsConfig;
+	}
+
+	public JsonObject getAudioConfig() {
+		return audioConfig;
 	}
 
 	public JsonObject getSettingsConfig() {
@@ -124,11 +138,11 @@ public class Configuration {
 		return ret;
 	}
 
-	public SpeechRecognizer loadSTTFromConfig(VoicePi control) {
+	public SpeechRecognizer loadSTTFromConfig() {
 		try {
 			return (SpeechRecognizer) Class.forName(sttConfig.getAsJsonPrimitive("class-name").getAsString())
-					.getConstructor(VoicePi.class, JsonObject.class)
-					.newInstance(control, sttConfig);
+					.getConstructor(JsonObject.class)
+					.newInstance(sttConfig);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			log.warn("Could not instantiate speech recognizer as specified in the config file", e);
 			return null;
@@ -146,6 +160,17 @@ public class Configuration {
 		}
 	}
 
+	public Audio loadAudioFromConfig() {
+		try {
+			return (Audio) Class.forName(audioConfig.getAsJsonPrimitive("class-name").getAsString())
+					.getConstructor(JsonObject.class)
+					.newInstance(audioConfig);
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+			log.warn("Could not instantiate audio settings as specified in the config file", e);
+			return null;
+		}
+	}
+
 	public Settings loadSettingsFromConfig() {
 		return VoicePi.GSON.fromJson(settingsConfig, Settings.class);
 	}
@@ -156,6 +181,10 @@ public class Configuration {
 
 	public void setSTT(SpeechRecognizer stt) {
 		this.customSTT = stt;
+	}
+
+	public void setAudio(Audio audio) {
+		this.customAudio = audio;
 	}
 
 	public void setModules(Map<String, Module> modules) {
@@ -172,6 +201,10 @@ public class Configuration {
 
 	public SpeechRecognizer getSTT() {
 		return customSTT;
+	}
+
+	public Audio getAudio() {
+		return customAudio;
 	}
 
 	public Map<String, Module> getModules() {

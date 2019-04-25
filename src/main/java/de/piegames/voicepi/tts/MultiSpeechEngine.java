@@ -30,7 +30,10 @@ public class MultiSpeechEngine extends SpeechEngine {
 
 	@Override
 	public AudioInputStream generateAudio(String text) {
-		outputs.stream().anyMatch(o -> o.speakAndWait(text));
+		if (onlyOne)
+			outputs.stream().anyMatch(o -> o.speakAndWait(text));
+		else
+			outputs.stream().forEach(o -> o.speakAndWait(text));
 		return null;
 	}
 }

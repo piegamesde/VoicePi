@@ -7,7 +7,9 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import com.google.gson.JsonObject;
-import de.piegames.voicepi.VoicePi;
+import de.piegames.voicepi.Settings;
+import de.piegames.voicepi.audio.Audio;
+import de.piegames.voicepi.state.VoiceState;
 
 public class StdInRecognizer extends SpeechRecognizer {
 
@@ -15,13 +17,17 @@ public class StdInRecognizer extends SpeechRecognizer {
 	protected Scanner					scanner;
 	protected InterruptibleInputStream	in;
 
-	public StdInRecognizer(VoicePi control, JsonObject config) {
-		super(control, config);
+	public StdInRecognizer(JsonObject config) {
+		super(config);
+	}
+
+	public StdInRecognizer() {
+		super(null);
 	}
 
 	@Override
-	public void load(BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
-		this.commandsSpoken = commandsSpoken;
+	public void load(Audio audio, VoiceState stateMachine, Settings settings, BlockingQueue<Collection<String>> commandsSpoken, Set<String> commands) throws IOException {
+		super.load(audio, stateMachine, settings, commandsSpoken, commands);
 		scanner = new Scanner(in = new InterruptibleInputStream(new CloseShieldInputStream(System.in)));
 	}
 
@@ -42,5 +48,11 @@ public class StdInRecognizer extends SpeechRecognizer {
 		ignoreExceptions = true;
 		thread.interrupt();
 		scanner.close();
+		super.stopRecognition();
+	}
+
+	@Override
+	public boolean transcriptionSupported() {
+		return false;
 	}
 }
